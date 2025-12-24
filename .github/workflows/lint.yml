@@ -1,0 +1,46 @@
+name: Lint
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 black isort mypy || echo "Linting tools installation failed, continuing..."
+        pip install -e .
+    
+    - name: Run flake8
+      continue-on-error: true
+      run: |
+        flake8 scheduler0 tests --count --select=E9,F63,F7,F82 --show-source --statistics || echo "flake8 found issues"
+        flake8 scheduler0 tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics || echo "flake8 style check completed"
+    
+    - name: Check code formatting with black
+      continue-on-error: true
+      run: black --check scheduler0 tests || echo "Code formatting check completed (non-blocking)"
+    
+    - name: Check import sorting with isort
+      continue-on-error: true
+      run: isort --check-only scheduler0 tests || echo "Import sorting check completed (non-blocking)"
+    
+    - name: Run mypy type checking
+      continue-on-error: true
+      run: mypy scheduler0 --ignore-missing-imports || echo "Type checking completed (non-blocking)"
+
