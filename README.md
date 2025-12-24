@@ -4,7 +4,7 @@
 
 # Scheduler0 Python Client
 
-A Python client library for interacting with the [Scheduler0 API](https://scheduler0.com/api). This client provides a convenient way to manage accounts, credentials, executions, executors, projects, jobs, features, create jobs from AI prompts, and monitor the health of your Scheduler0 cluster.
+A Python client library for interacting with the [Scheduler0 API](https://scheduler0.com). This client provides a convenient way to manage accounts, credentials, executions, executors, projects, jobs, features, create jobs from AI prompts, and monitor the health of your Scheduler0 cluster.
 
 ## Features
 
@@ -89,6 +89,8 @@ pip install .
 
 The Scheduler0 Python client supports multiple authentication methods:
 
+> **For Self-hosted Users**: If you're running Scheduler0 on your own infrastructure, you can authenticate using a username and password that is set during infrastructure setup (see Basic Authentication below).
+
 ### 1. API Key + Secret Authentication (Default)
 Most endpoints require API Key and Secret authentication with an Account ID:
 
@@ -104,8 +106,8 @@ client = NewAPIClientWithAccount(
 )
 ```
 
-### 2. Basic Authentication (Peer Communication)
-For peer-to-peer communication:
+### 2. Basic Authentication (Self-hosted Infrastructure)
+For users running Scheduler0 on their own infrastructure, authenticate with a username and password that is set during infrastructure setup:
 
 ```python
 from scheduler0 import NewBasicAuthClient
@@ -113,10 +115,12 @@ from scheduler0 import NewBasicAuthClient
 client = NewBasicAuthClient(
     base_url="http://localhost:7070",  # Base URL
     version="v1",                      # API Version
-    username="username",               # Username
-    password="password",               # Password
+    username="username",               # Username set during infrastructure setup
+    password="password",               # Password set during infrastructure setup
 )
 ```
+
+> **Note**: This authentication method is for self-hosted deployments. The username and password are configured when you set up your Scheduler0 infrastructure.
 
 ### 3. Flexible Options Pattern
 For more flexibility, use the options pattern:
