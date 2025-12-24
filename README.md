@@ -8,13 +8,15 @@ A Python client library for interacting with the [Scheduler0 API](https://schedu
 
 ## Features
 
-- **Account Management**
+- **Account Management** *(Self-hosted only)*
   - Create accounts
   - Get account details
   - Add/remove features from accounts
+  - *Note: These APIs are for users running Scheduler0 in their own infrastructure who need granular control over team access and resource usage.*
 
-- **Feature Management**
+- **Feature Management** *(Self-hosted only)*
   - List available features
+  - *Note: These APIs are for users running Scheduler0 in their own infrastructure who need granular control over team access and resource usage.*
 
 - **Credentials Management**
   - List credentials with pagination and ordering
@@ -56,8 +58,9 @@ A Python client library for interacting with the [Scheduler0 API](https://schedu
   - AI generates cron expressions, scheduling, and job metadata
   - Supports purposes, events, recipients, and channels
 
-- **Async Tasks Management**
+- **Async Tasks Management** *(Self-hosted only)*
   - Get async task status by request ID
+  - *Note: These APIs are for users running Scheduler0 in their own infrastructure who need granular control over team access and resource usage.*
 
 - **Health Monitoring**
   - Check cluster health
@@ -132,7 +135,11 @@ client = NewClient(
 
 ## Usage
 
+> **Note for Self-hosted Users**: Account Management, Feature Management, and Async Tasks Management APIs are designed for users running Scheduler0 in their own infrastructure who need granular control over team access and resource usage. If you're using Scheduler0's hosted service, these endpoints may not be available or may work differently.
+
 ### Managing Accounts
+
+> **Note**: Account Management is designed for self-hosted deployments where you need granular control over team access and resource usage.
 
 ```python
 from scheduler0 import NewAPIClientWithAccount
@@ -158,6 +165,8 @@ client.remove_feature_from_account("account-id", feature)
 ```
 
 ### Managing Features
+
+> **Note**: Feature Management is designed for self-hosted deployments where you need granular control over team access and resource usage.
 
 ```python
 # List all available features
@@ -450,6 +459,8 @@ for config in job_configs:
 - Sufficient credits (1 credit per prompt execution)
 
 ### Managing Async Tasks
+
+> **Note**: Async Tasks Management is designed for self-hosted deployments where you need granular control over team access and resource usage.
 
 ```python
 # Get async task status
