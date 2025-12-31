@@ -332,3 +332,44 @@ class PromptJobResponse:
     timezone: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
+
+# Execution Analytics Types
+@dataclass
+class DateRangeAnalyticsPoint:
+    date: str
+    time: str
+    scheduled: int
+    success: int
+    failed: int
+
+
+@dataclass
+class DateRangeAnalyticsResponse:
+    account_id: int
+    timezone: str
+    start_date: str
+    start_time: str
+    end_date: str
+    end_time: str
+    points: List[DateRangeAnalyticsPoint]
+
+
+@dataclass
+class ExecutionTotalsResponse:
+    account_id: int
+    scheduled: int
+    success: int
+    failed: int
+
+
+@dataclass
+class CleanupOldLogsRequestBody:
+    account_id: str
+    retention_months: int
+
+
+@dataclass
+class CleanupOldLogsResponse:
+    success: bool
+    data: Dict[str, Any]
+
