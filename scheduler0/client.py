@@ -40,7 +40,7 @@ class Client:
             password: Password for basic authentication
         """
         parsed_url = urlparse(base_url)
-        if not parsed_url.scheme:
+        if not parsed_url.scheme or parsed_url.scheme not in ('http', 'https'):
             raise ValueError("base_url must include a scheme (http:// or https://)")
 
         self.base_url = base_url.rstrip("/")
@@ -220,17 +220,18 @@ class Client:
         account_id_override: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Make a GET request."""
-        response = self._request("GET", endpoint, params=params, account_id_override=account_id_override)
+        response = self._request("GET", endpoint, body=None, params=params, account_id_override=account_id_override)
         return response.json()
 
     def _post(
         self,
         endpoint: str,
         body: Optional[Any] = None,
+        params: Optional[Dict[str, Any]] = None,
         account_id_override: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Make a POST request."""
-        response = self._request("POST", endpoint, body=body, account_id_override=account_id_override)
+        response = self._request("POST", endpoint, body=body, params=params, account_id_override=account_id_override)
         if response.status_code == 204:
             return {}
         return response.json()
@@ -239,10 +240,11 @@ class Client:
         self,
         endpoint: str,
         body: Optional[Any] = None,
+        params: Optional[Dict[str, Any]] = None,
         account_id_override: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Make a PUT request."""
-        response = self._request("PUT", endpoint, body=body, account_id_override=account_id_override)
+        response = self._request("PUT", endpoint, body=body, params=params, account_id_override=account_id_override)
         if response.status_code == 204:
             return {}
         return response.json()
@@ -251,10 +253,11 @@ class Client:
         self,
         endpoint: str,
         body: Optional[Any] = None,
+        params: Optional[Dict[str, Any]] = None,
         account_id_override: Optional[str] = None,
     ) -> None:
         """Make a DELETE request."""
-        self._request("DELETE", endpoint, body=body, account_id_override=account_id_override)
+        self._request("DELETE", endpoint, body=body, params=params, account_id_override=account_id_override)
 
 
 # Convenience factory functions

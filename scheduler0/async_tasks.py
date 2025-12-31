@@ -12,7 +12,7 @@ def get_async_task(
     account_id_override: Optional[str] = None,
 ) -> dict:
     """Get async task status by request ID."""
-    return self._get(f"/async-tasks/{request_id}", account_id_override=account_id_override)
+    return self._get(f"/async-tasks/{request_id}", params=None, account_id_override=account_id_override)
 
 
 # Attach methods to Client class

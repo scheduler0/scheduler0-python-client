@@ -25,7 +25,7 @@ def create_job_from_prompt(
     Returns:
         List of PromptJobResponse dictionaries with generated configurations
     """
-    response = self._request("POST", "/prompt", body=body, account_id_override=account_id_override)
+    response = self._request("POST", "/prompt", body=body, params=None, account_id_override=account_id_override)
     return response.json()  # Returns a list directly, not wrapped in a dict
 
 

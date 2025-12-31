@@ -43,7 +43,7 @@ def get_executor(
     account_id_override: Optional[str] = None,
 ) -> dict:
     """Get a specific executor."""
-    return self._get(f"/executors/{executor_id}", account_id_override=account_id_override)
+    return self._get(f"/executors/{executor_id}", params=None, account_id_override=account_id_override)
 
 
 def update_executor(

@@ -176,7 +176,7 @@ class TestClientHTTPMethods:
         result = client._get("/jobs")
         assert result == {"success": True}
         mock_request.assert_called_once_with(
-            "GET", "/jobs", params=None, account_id_override=None
+            "GET", "/jobs", body=None, params=None, account_id_override=None
         )
 
     @patch('scheduler0.client.Client._request')
@@ -220,36 +220,33 @@ class TestClientHTTPMethods:
 class TestClientErrorHandling:
     """Test error handling."""
 
-    @patch('scheduler0.client.Client.session')
-    def test_request_http_error(self, mock_session, client):
+    def test_request_http_error(self, client):
         """Test HTTP error handling."""
         mock_response = Mock()
         mock_response.status_code = 400
         mock_response.text = "Bad Request"
         mock_response.json.return_value = {"message": "Invalid request"}
-        mock_session.request.return_value = mock_response
+        client.session.request = Mock(return_value=mock_response)
 
         with pytest.raises(requests.HTTPError) as exc_info:
             client._request("GET", "/jobs")
         assert "Invalid request" in str(exc_info.value)
 
-    @patch('scheduler0.client.Client.session')
-    def test_request_http_error_no_json(self, mock_session, client):
+    def test_request_http_error_no_json(self, client):
         """Test HTTP error handling when response is not JSON."""
         mock_response = Mock()
         mock_response.status_code = 500
         mock_response.text = "Internal Server Error"
         mock_response.json.side_effect = ValueError("Not JSON")
-        mock_session.request.return_value = mock_response
+        client.session.request = Mock(return_value=mock_response)
 
         with pytest.raises(requests.HTTPError) as exc_info:
             client._request("GET", "/jobs")
         assert "Internal Server Error" in str(exc_info.value)
 
-    @patch('scheduler0.client.Client.session')
-    def test_request_network_error(self, mock_session, client):
+    def test_request_network_error(self, client):
         """Test network error handling."""
-        mock_session.request.side_effect = requests.ConnectionError("Connection failed")
+        client.session.request = Mock(side_effect=requests.ConnectionError("Connection failed"))
 
         with pytest.raises(requests.ConnectionError):
             client._request("GET", "/jobs")

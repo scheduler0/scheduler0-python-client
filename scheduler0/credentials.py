@@ -48,7 +48,7 @@ def get_credential(
     account_id_override: Optional[str] = None,
 ) -> dict:
     """Get a specific credential."""
-    return self._get(f"/credentials/{credential_id}", account_id_override=account_id_override)
+    return self._get(f"/credentials/{credential_id}", params=None, account_id_override=account_id_override)
 
 
 def update_credential(

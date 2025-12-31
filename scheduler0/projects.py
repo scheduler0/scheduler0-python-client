@@ -43,7 +43,7 @@ def get_project(
     account_id_override: Optional[str] = None,
 ) -> dict:
     """Get a specific project."""
-    return self._get(f"/projects/{project_id}", account_id_override=account_id_override)
+    return self._get(f"/projects/{project_id}", params=None, account_id_override=account_id_override)
 
 
 def update_project(

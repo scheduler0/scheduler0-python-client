@@ -55,7 +55,7 @@ def get_job(
     account_id_override: Optional[str] = None,
 ) -> dict:
     """Get a specific job."""
-    return self._get(f"/jobs/{job_id}", account_id_override=account_id_override)
+    return self._get(f"/jobs/{job_id}", params=None, account_id_override=account_id_override)
 
 
 def update_job(
