@@ -94,7 +94,7 @@ class TestClientRequestBuilding:
         """Test header preparation with API key."""
         headers = client._prepare_headers(account_id="123")
         assert headers["X-API-Key"] == "test-api-key"
-        assert headers["X-API-Secret"] == "test-api-secret"
+        assert headers["X-Secret-Key"] == "test-api-secret"
         assert headers["X-Account-ID"] == "123"
         assert headers["Content-Type"] == "application/json"
 

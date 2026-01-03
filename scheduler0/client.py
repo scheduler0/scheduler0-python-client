@@ -84,7 +84,7 @@ class Client:
         elif self.api_key and self.api_secret:
             # API Key + Secret authentication
             headers["X-API-Key"] = self.api_key
-            headers["X-API-Secret"] = self.api_secret
+            headers["X-Secret-Key"] = self.api_secret
 
         # Add account ID if provided
         if account_id:
