@@ -17,6 +17,7 @@ from . import features
 from . import async_tasks
 from . import healthcheck
 from . import prompt
+from . import backup
 
 # Import types
 from .types import (
