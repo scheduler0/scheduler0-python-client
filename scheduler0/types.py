@@ -44,11 +44,16 @@ class Credential:
     modified_by: Optional[str] = None
     deleted_by: Optional[str] = None
     archived_by: Optional[str] = None
+    expires_at: Optional[str] = None
+    scopes: List[str] = field(default_factory=list)
 
 
 @dataclass
 class CredentialCreateRequestBody:
     created_by: str
+    # Scopes must be a non-empty subset of {"read", "write", "execute"}; the
+    # API rejects empty/unknown values with a 400.
+    scopes: List[str] = field(default_factory=list)
     archived: bool = False
     account_id: Optional[int] = None  # Excluded from JSON
 

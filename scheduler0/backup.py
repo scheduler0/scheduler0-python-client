@@ -23,62 +23,23 @@ def backup_database(client) -> Dict[str, Any]:
     return client._request("POST", "cluster/backup")
 
 
-def backup_database_to_file(client, dest_path: str) -> Dict[str, Any]:
-    """
-    Initiate a backup to a specific file path.
-
-    Args:
-        client: Scheduler0 client instance
-        dest_path: Destination path for the backup file
-
-    Returns:
-        Response indicating backup to file has been initiated
-
-    Example:
-        >>> result = backup_database_to_file(client, "/path/to/backup.db")
-        >>> print(result["data"]["status"])
-        backup to file initiated
-    """
-    body = {"destPath": dest_path}
-    return client._request("POST", "cluster/backup-to-file", body=body)
-
-
-def restore_database(client, backup_path: str) -> Dict[str, Any]:
+def restore_database(client, file_name: str) -> Dict[str, Any]:
     """
     Initiate a restore from a backup file.
 
     Args:
         client: Scheduler0 client instance
-        backup_path: Path to the backup file to restore from
+        file_name: Backup file name (e.g. db-20260212-114810.db). When S3 is
+            configured this is the S3 object key; otherwise a local file path.
 
     Returns:
-        Response indicating restore has been initiated
+        Response indicating restore has been initiated (includes status and requestId).
 
     Example:
-        >>> result = restore_database(client, "/path/to/backup.db")
+        >>> result = restore_database(client, "db-20260212-114810.db")
         >>> print(result["data"]["status"])
         restore initiated
     """
-    body = {"backupPath": backup_path}
+    body = {"filePath": file_name}
     return client._request("POST", "cluster/restore", body=body)
-
-
-def get_backup_restore_progress(client) -> Dict[str, Any]:
-    """
-    Get the current backup/restore progress.
-
-    Args:
-        client: Scheduler0 client instance
-
-    Returns:
-        Progress information including status, progress percentage, and message
-
-    Example:
-        >>> progress = get_backup_restore_progress(client)
-        >>> print(f"{progress['data']['status']}: {progress['data']['progress']}%")
-        in-progress: 45%
-        >>> print(progress['data']['message'])
-        Backing up: 4500/10000 rows (45.0%)
-    """
-    return client._request("GET", "cluster/backup-restore-progress")
 

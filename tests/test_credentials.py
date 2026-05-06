@@ -49,11 +49,37 @@ class TestCredentials:
     @patch('scheduler0.client.Client._post')
     def test_create_credential(self, mock_post, client):
         """Test creating a credential."""
-        mock_post.return_value = {"success": True, "data": {"id": 1, "apiKey": "key"}}
-        body = CredentialCreateRequestBody(created_by="user@example.com")
+        mock_post.return_value = {
+            "success": True,
+            "data": {
+                "id": 1,
+                "apiKey": "key",
+                "expiresAt": "2025-04-01T00:00:00Z",
+                "scopes": ["read", "write", "execute"],
+            },
+        }
+        body = CredentialCreateRequestBody(
+            created_by="user@example.com",
+            scopes=["read", "write", "execute"],
+        )
         result = client.create_credential(body)
         assert result["success"] is True
+        assert result["data"]["scopes"] == ["read", "write", "execute"]
+        assert result["data"]["expiresAt"] == "2025-04-01T00:00:00Z"
         mock_post.assert_called_once_with("/credentials", body, account_id_override=None)
+
+    @patch('scheduler0.client.Client._post')
+    def test_create_credential_serialises_scopes(self, mock_post, client):
+        """Scopes should be forwarded to the API as a JSON array."""
+        mock_post.return_value = {"success": True, "data": {"id": 2}}
+        body = CredentialCreateRequestBody(
+            created_by="user@example.com",
+            scopes=["read", "execute"],
+        )
+        client.create_credential(body)
+        # The dataclass passed to _post must carry the requested scopes verbatim.
+        called_body = mock_post.call_args[0][1]
+        assert called_body.scopes == ["read", "execute"]
 
     @patch('scheduler0.client.Client._get')
     def test_get_credential(self, mock_get, client):
