@@ -81,6 +81,20 @@ def archive_credential(
     self._post(f"/credentials/{credential_id}/archive", body, account_id_override=account_id_override)
 
 
+def rotate_credential_secret(self: Client) -> dict:
+    """Re-encrypt all active, non-expired credentials with the new SecretKey.
+
+    **Self-Hosting Only.** The operator must update ``SecretKey`` in their
+    secrets source before calling this method. Requires a basic-auth client
+    instance (created with ``username`` + ``password``). The operation is
+    resumable — if interrupted, call again to resume from the savepoint.
+
+    Returns:
+        dict: ``{"success": True, "data": {"rotated": <count>}}``
+    """
+    return self._post("/credentials/rotate-secret", None)
+
+
 # Attach methods to Client class
 Client.list_credentials = list_credentials
 Client.create_credential = create_credential
@@ -88,4 +102,5 @@ Client.get_credential = get_credential
 Client.update_credential = update_credential
 Client.delete_credential = delete_credential
 Client.archive_credential = archive_credential
+Client.rotate_credential_secret = rotate_credential_secret
 

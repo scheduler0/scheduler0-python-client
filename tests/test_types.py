@@ -62,19 +62,24 @@ class TestTypes:
         assert body.scopes == []
 
     def test_credential_includes_expiry_and_scopes(self):
-        """Credential responses must round-trip the new expiry and scope fields."""
+        """Credential responses must round-trip the expiry and scope fields.
+
+        The encrypted ``api_secret`` is never returned by the API, so it is not a
+        field on the type. ``plaintext_secret`` is returned only on creation.
+        """
         cred = Credential(
             id=1,
             account_id=2,
             archived=False,
             api_key="key",
-            api_secret="secret",
             date_created="2025-01-01T00:00:00Z",
             expires_at="2025-04-01T00:00:00Z",
             scopes=["read", "write", "execute"],
+            plaintext_secret="plaintext-once",
         )
         assert cred.expires_at == "2025-04-01T00:00:00Z"
         assert cred.scopes == ["read", "write", "execute"]
+        assert cred.plaintext_secret == "plaintext-once"
 
     def test_executor_request_body(self):
         """Test ExecutorRequestBody."""

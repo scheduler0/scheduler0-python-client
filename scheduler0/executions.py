@@ -14,7 +14,7 @@ def list_executions(
     end_date: Optional[str] = None,
     project_id: Optional[int] = None,
     job_id: Optional[int] = None,
-    state: Optional[Literal["scheduled", "completed", "failed"]] = None,
+    state: Optional[Literal["scheduled", "success", "failed"]] = None,
     order_by: Optional[Literal["dateCreated", "lastExecutionDateTime", "nextExecutionDateTime"]] = None,
     order_direction: Optional[Literal["ASC", "DESC"]] = None,
     account_id_override: Optional[str] = None,
@@ -29,7 +29,7 @@ def list_executions(
         end_date: End date for filtering (RFC3339 format, optional)
         project_id: Project ID to filter by (optional)
         job_id: Job ID to filter by (optional)
-        state: Execution state to filter by - "scheduled", "completed", or "failed" (optional)
+        state: Execution state to filter by - "scheduled", "success", or "failed" (optional)
         order_by: Field to order results by - "dateCreated", "lastExecutionDateTime", or "nextExecutionDateTime" (optional)
         order_direction: Direction to order results - "ASC" or "DESC" (optional)
         account_id_override: Optional account ID override

@@ -23,10 +23,10 @@ def create_job_from_prompt(
         account_id_override: Optional account ID override
 
     Returns:
-        List of PromptJobResponse dictionaries with generated configurations
+        List of PromptProviderResult dictionaries (each containing provider, model, jobs, token counts, duration)
     """
     response = self._request("POST", "/prompt", body=body, params=None, account_id_override=account_id_override)
-    return response.json()  # Returns a list directly, not wrapped in a dict
+    return response.json()["data"]
 
 
 # Attach methods to Client class

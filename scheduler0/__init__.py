@@ -18,12 +18,15 @@ from . import async_tasks
 from . import healthcheck
 from . import prompt
 from . import backup
+from . import local_executors
 
 # Import types
 from .types import (
     Account,
     AccountCreateRequestBody,
     AccountFeature,
+    AccountJobExecutionsCount,
+    AccountAISettings,
     Credential,
     CredentialCreateRequestBody,
     CredentialUpdateRequestBody,
@@ -49,6 +52,8 @@ from .types import (
     RaftStats,
     PromptJobRequest,
     PromptJobResponse,
+    LocalExecutorRegisterRequest,
+    LocalExecutionReport,
 )
 
 __version__ = "1.0.0"
@@ -62,6 +67,8 @@ __all__ = [
     "Account",
     "AccountCreateRequestBody",
     "AccountFeature",
+    "AccountJobExecutionsCount",
+    "AccountAISettings",
     "Credential",
     "CredentialCreateRequestBody",
     "CredentialUpdateRequestBody",
@@ -87,5 +94,7 @@ __all__ = [
     "RaftStats",
     "PromptJobRequest",
     "PromptJobResponse",
+    "LocalExecutorRegisterRequest",
+    "LocalExecutionReport",
 ]
 

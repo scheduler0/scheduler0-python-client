@@ -29,14 +29,44 @@ class AccountCreateRequestBody:
     account_id: Optional[int] = None  # Excluded from JSON
 
 
+@dataclass
+class AccountJobExecutionsCount:
+    id: int
+    account_id: int
+    execution_count: int
+    tokens: int
+    date_created: str
+    date_modified: str
+    next_reset_date: str
+
+
+@dataclass
+class AccountAISettings:
+    account_id: Optional[int] = None
+    provider: Optional[str] = None
+    model: Optional[str] = None
+    openai_api_key: Optional[str] = None
+    anthropic_api_key: Optional[str] = None
+    bedrock_access_key_id: Optional[str] = None
+    bedrock_secret_key: Optional[str] = None
+    bedrock_region: Optional[str] = None
+    date_created: Optional[str] = None
+    date_modified: Optional[str] = None
+
+
 # Credential Types
 @dataclass
 class Credential:
+    """Credential returned by the Scheduler0 API.
+
+    ``api_secret`` (the AES-GCM encrypted form) is **never** included in API
+    responses.  ``plaintext_secret`` is returned exactly once in the 201 create
+    response — the server cannot retrieve it afterwards.  Save it immediately.
+    """
     id: int
     account_id: int
     archived: bool
     api_key: str
-    api_secret: str
     date_created: str
     date_modified: Optional[str] = None
     date_deleted: Optional[str] = None
@@ -46,6 +76,20 @@ class Credential:
     archived_by: Optional[str] = None
     expires_at: Optional[str] = None
     scopes: List[str] = field(default_factory=list)
+    plaintext_secret: Optional[str] = None
+
+
+@dataclass
+class RotateSecretData:
+    """Payload returned by rotate_credential_secret()."""
+    rotated: int
+
+
+@dataclass
+class RotateSecretResponse:
+    """Response returned by rotate_credential_secret()."""
+    success: bool
+    data: RotateSecretData
 
 
 @dataclass
@@ -377,4 +421,30 @@ class CleanupOldLogsRequestBody:
 class CleanupOldLogsResponse:
     success: bool
     data: Dict[str, Any]
+
+
+# Local Executor Types
+@dataclass
+class LocalExecutorRegisterRequest:
+    """Body for POST /local-executors. The server sets the executor type to "local"."""
+    name: str
+    command: str
+    working_dir: Optional[str] = None
+    created_by: Optional[str] = None
+
+
+@dataclass
+class LocalExecutionReport:
+    """A single execution event reported to POST /local-executors/{id}/executions.
+
+    ``state`` is an integer: 0 = scheduled, 1 = success, 2 = failed.
+    ``last_execution_time`` / ``next_execution_time`` are RFC3339 strings.
+    """
+    job_id: int
+    unique_id: str
+    state: int
+    last_execution_time: Optional[str] = None
+    next_execution_time: Optional[str] = None
+    execution_version: Optional[int] = None
+    job_queue_version: Optional[int] = None
 

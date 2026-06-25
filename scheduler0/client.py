@@ -6,7 +6,6 @@ from typing import Optional, Dict, Any, List
 from urllib.parse import urljoin, urlparse
 
 import requests
-from . import backup
 
 
 class Client:

@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "scheduler0-python-client"
-version = "1.0.0"
+name = "scheduler0"
+dynamic = ["version"]
 description = "A Python client library for interacting with the Scheduler0 API"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -12,6 +12,7 @@ license = {text = "MIT"}
 authors = [
     {name = "Scheduler0", email = "support@scheduler0.com"}
 ]
+keywords = ["scheduler0", "scheduler", "cron", "job-scheduler", "api-client"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -36,5 +37,14 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/scheduler0/scheduler0-python-client"
+Repository = "https://github.com/scheduler0/scheduler0-python-client"
 Documentation = "https://api-reference.scheduler0.com"
 
+# Single source of truth for the version: scheduler0/__init__.py __version__
+[tool.setuptools.dynamic]
+version = {attr = "scheduler0.__version__"}
+
+# Only ship the library package; never ship the test suite as a top-level package.
+[tool.setuptools.packages.find]
+include = ["scheduler0*"]
+exclude = ["tests*"]

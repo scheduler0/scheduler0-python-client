@@ -12,10 +12,14 @@ A Python client library for interacting with the [Scheduler0 API](https://schedu
   - Create accounts
   - Get account details
   - Add/remove features from accounts
+  - Get/increase the monthly execution count
+  - Get/add platform tokens
+  - Configure per-account AI provider settings (BYOK)
   - *Note: These APIs are for users running Scheduler0 in their own infrastructure who need granular control over team access and resource usage.*
 
 - **Feature Management** *(Self-hosted only)*
   - List available features
+  - Add/remove all features for an account
   - *Note: These APIs are for users running Scheduler0 in their own infrastructure who need granular control over team access and resource usage.*
 
 - **Credentials Management**
@@ -25,18 +29,30 @@ A Python client library for interacting with the [Scheduler0 API](https://schedu
   - Update credentials
   - Delete credentials
   - Archive credentials
+  - Rotate the server secret key
 
 - **Executions Management**
   - List job executions with date filtering
   - Filter by project ID and job ID
   - View execution details and logs
+  - Date-range analytics and lifetime totals
+  - Clean up old execution logs
 
 - **Executors Management**
   - List executors with pagination and ordering
-  - Create new executors (webhook, cloud function, container)
+  - Create new executors (webhook, cloud function)
   - Get executor details
   - Update executors
   - Delete executors
+
+- **Local Executors Management**
+  - Register local executors
+  - Pull assigned jobs for a local executor
+  - Report local execution results in batches
+
+- **Backup & Restore** *(Self-hosted only)*
+  - Start an online database backup
+  - Restore from a backup file
 
 - **Projects Management**
   - List projects with pagination
@@ -70,7 +86,7 @@ A Python client library for interacting with the [Scheduler0 API](https://schedu
 ## Installation
 
 ```bash
-pip install scheduler0-python-client
+pip install scheduler0
 ```
 
 Or install from source:
@@ -166,6 +182,32 @@ result = client.add_feature_to_account("account-id", feature)
 
 # Remove feature from account
 client.remove_feature_from_account("account-id", feature)
+
+# Get / increase the account's monthly execution count
+count = client.get_account_execution_count("account-id")
+increased = client.increase_account_execution_count("account-id", 10000)
+
+# Get / add platform tokens
+tokens = client.get_account_tokens("account-id")
+added = client.add_account_tokens("account-id", 1000)
+```
+
+### AI Provider Settings (Bring Your Own Key)
+
+Configure a per-account model provider and key so `create_job_from_prompt` uses your own credentials. Supported providers: `openai`, `anthropic`, `bedrock`. Credential fields are encrypted at rest and never returned in plaintext by `get_account_ai_settings`.
+
+```python
+from scheduler0.types import AccountAISettings
+
+# Read current settings (keys are redacted)
+settings = client.get_account_ai_settings("account-id")
+
+# Save settings
+saved = client.upsert_account_ai_settings("account-id", AccountAISettings(
+    provider="anthropic",
+    model="claude-sonnet-4-5",  # optional; provider default used when empty
+    anthropic_api_key="sk-ant-...",
+))
 ```
 
 ### Managing Features
@@ -175,6 +217,10 @@ client.remove_feature_from_account("account-id", feature)
 ```python
 # List all available features
 features = client.list_features()
+
+# Add or remove every feature for an account
+client.add_all_features_to_account("account-id")
+client.remove_all_features_from_account("account-id")
 ```
 
 ### Managing Credentials
@@ -216,6 +262,10 @@ client.delete_credential("credential-id", delete_body)
 # Archive a credential
 archive_body = CredentialArchiveRequestBody(archived_by="user@example.com")
 client.archive_credential("credential-id", archive_body)
+
+# Re-encrypt all active credentials with a new server secret key (self-hosting).
+# Update the server's secret key first, then call this.
+rotated = client.rotate_credential_secret()
 ```
 
 ### Managing Executions
@@ -230,6 +280,18 @@ executions = client.list_executions(
     limit=10,                           # Required: Maximum number of items
     offset=0,                           # Required: Number of items to skip
 )
+
+# Execution counts grouped into per-minute buckets for a time window
+analytics = client.get_date_range_analytics(
+    start_date="2024-01-01",  # YYYY-MM-DD
+    start_time="00:00:00",    # HH:MM:SS or HH:MM
+)
+
+# Lifetime totals (scheduled / success / failed) for the account
+totals = client.get_execution_totals(123)
+
+# Delete execution logs older than a retention window (self-hosting; peer auth)
+cleanup = client.cleanup_old_execution_logs("123", 6)  # retention_months
 ```
 
 ### Managing Executors
@@ -288,6 +350,38 @@ result = client.update_executor("executor-id", update)
 # Delete an executor
 delete_body = ExecutorDeleteRequestBody(deleted_by="user@example.com")
 client.delete_executor("executor-id", delete_body)
+```
+
+### Managing Local Executors
+
+Local executors run jobs as shell commands on a machine you control. Register one, then the `scheduler0-cli` process pulls assigned jobs and reports results back.
+
+```python
+from scheduler0.types import LocalExecutorRegisterRequest, LocalExecutionReport
+
+# Register a local executor (the server sets the type to "local")
+reg = client.register_local_executor(LocalExecutorRegisterRequest(
+    name="My Local Executor",
+    command="/usr/local/bin/process-job.sh",
+    working_dir="/home/deploy/app",
+    created_by="user@example.com",
+))
+executor_id = reg["data"]["id"]
+
+# Pull the active jobs assigned to a local executor (also renews its lease)
+jobs = client.pull_local_executor_jobs(executor_id)
+
+# Report a batch of execution results (state: 0=scheduled, 1=success, 2=failed)
+result = client.report_local_executions(executor_id, [
+    LocalExecutionReport(
+        job_id=1,
+        unique_id="exec-1",
+        state=1,
+        last_execution_time="2025-01-01T00:00:00Z",
+        next_execution_time="2025-01-02T00:00:00Z",
+    ),
+])
+print(f"{result['data']['committed']} executions committed")
 ```
 
 ### Managing Projects
@@ -418,7 +512,7 @@ prompt_request = PromptJobRequest(
     events=["weekly_cycle"],
     recipients=["team@example.com", "manager@example.com"],
     channels=["email"],
-    timezone="America/New_York",
+    timezone="America/New_York",  # Optional IANA timezone; defaults to "UTC" when omitted.
 )
 
 # Generate job configurations from the prompt
@@ -462,6 +556,8 @@ for config in job_configs:
 - Account ID header
 - Sufficient credits (1 credit per prompt execution)
 
+The `timezone` field is optional. When omitted, the AI assumes `UTC`. When set to an IANA name (e.g. `"America/New_York"`), the AI interprets relative phrases like *"9am tomorrow"* in that timezone and emits `nextRunAt` / `startDate` / `endDate` with the matching numeric offset. Invalid timezone strings are rejected by the API with `400 Bad Request`.
+
 ### Managing Async Tasks
 
 > **Note**: Async Tasks Management is designed for self-hosted deployments where you need granular control over team access and resource usage.
@@ -480,6 +576,18 @@ print(f"Leader: {health['data']['leaderAddress']}")
 print(f"Raft State: {health['data']['raftStats']['state']}")
 ```
 
+### Backup and Restore
+
+> **Note**: Backup and restore are self-hosting cluster operations and require Basic Authentication.
+
+```python
+# Start an online database backup
+backup = client.backup_database()
+
+# Restore from a backup file (S3 object key when S3 is configured, else local path)
+restore = client.restore_database("db-20260212-114810.db")
+```
+
 ## Data Types
 
 ### Job Status
@@ -489,7 +597,6 @@ print(f"Raft State: {health['data']['raftStats']['state']}")
 ### Executor Types
 - `"webhook_url"` - HTTP webhook executor
 - `"cloud_function"` - Cloud function executor
-- `"container"` - Container executor
 
 ### Webhook Methods
 - `"GET"`, `"POST"`, `"PUT"`, `"DELETE"`

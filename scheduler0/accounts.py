@@ -4,7 +4,7 @@ Account management methods for Scheduler0 client.
 
 from typing import Optional
 from .client import Client
-from .types import AccountCreateRequestBody, FeatureRequest
+from .types import AccountCreateRequestBody, AccountAISettings, FeatureRequest
 
 
 def create_account(self: Client, body: AccountCreateRequestBody) -> dict:
@@ -48,6 +48,27 @@ def increase_account_execution_count(self: Client, account_id: str, count: int) 
     return self._put(f"/accounts/{account_id}/execution-count", body, account_id_override=account_id)
 
 
+def get_account_tokens(self: Client, account_id: str) -> dict:
+    """Get the current token balance for an account."""
+    return self._get(f"/accounts/{account_id}/tokens", params=None, account_id_override=account_id)
+
+
+def add_account_tokens(self: Client, account_id: str, amount: int) -> dict:
+    """Add tokens to an account's balance."""
+    body = {"amount": amount}
+    return self._put(f"/accounts/{account_id}/tokens/add", body, account_id_override=account_id)
+
+
+def get_account_ai_settings(self: Client, account_id: str) -> dict:
+    """Get the AI provider settings for an account."""
+    return self._get("/account/ai-settings", params=None, account_id_override=account_id)
+
+
+def upsert_account_ai_settings(self: Client, account_id: str, body: AccountAISettings) -> dict:
+    """Create or update the AI provider settings for an account."""
+    return self._put("/account/ai-settings", body, account_id_override=account_id)
+
+
 # Attach methods to Client class
 Client.create_account = create_account
 Client.get_account = get_account
@@ -57,4 +78,8 @@ Client.add_all_features_to_account = add_all_features_to_account
 Client.remove_all_features_from_account = remove_all_features_from_account
 Client.get_account_execution_count = get_account_execution_count
 Client.increase_account_execution_count = increase_account_execution_count
+Client.get_account_tokens = get_account_tokens
+Client.add_account_tokens = add_account_tokens
+Client.get_account_ai_settings = get_account_ai_settings
+Client.upsert_account_ai_settings = upsert_account_ai_settings
 
