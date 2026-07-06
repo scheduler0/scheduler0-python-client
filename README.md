@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="logo.png" alt="Scheduler0 Logo" width="200"/>
+  <img src="https://raw.githubusercontent.com/scheduler0/scheduler0-python-client/main/logo.png" alt="Scheduler0 Logo" width="200"/>
 </div>
 
 # Scheduler0 Python Client
@@ -263,9 +263,11 @@ client.delete_credential("credential-id", delete_body)
 archive_body = CredentialArchiveRequestBody(archived_by="user@example.com")
 client.archive_credential("credential-id", archive_body)
 
-# Re-encrypt all active credentials with a new server secret key (self-hosting).
-# Update the server's secret key first, then call this.
-rotated = client.rotate_credential_secret()
+# Re-encrypt stored secrets (credential secrets + executor cloud keys + AI provider
+# keys) with a new server secret key (self-hosting). Update the server's SecretKey and
+# reload it first, then call this with the previous key.
+rotated = client.rotate_secret("<old-hex-secret-key>")
+# rotated["data"]["credentialsRotated"], rotated["data"]["executorsRotated"], rotated["data"]["aiSettingsRotated"]
 ```
 
 ### Managing Executions

@@ -81,13 +81,15 @@ class Credential:
 
 @dataclass
 class RotateSecretData:
-    """Payload returned by rotate_credential_secret()."""
-    rotated: int
+    """Payload returned by rotate_secret()."""
+    credentials_rotated: int
+    executors_rotated: int
+    ai_settings_rotated: int
 
 
 @dataclass
 class RotateSecretResponse:
-    """Response returned by rotate_credential_secret()."""
+    """Response returned by rotate_secret()."""
     success: bool
     data: RotateSecretData
 

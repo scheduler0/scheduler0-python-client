@@ -81,18 +81,28 @@ def archive_credential(
     self._post(f"/credentials/{credential_id}/archive", body, account_id_override=account_id_override)
 
 
-def rotate_credential_secret(self: Client) -> dict:
-    """Re-encrypt all active, non-expired credentials with the new SecretKey.
+def rotate_secret(self: Client, old_secret_key: str) -> dict:
+    """Re-encrypt stored secrets with the server's new SecretKey.
 
-    **Self-Hosting Only.** The operator must update ``SecretKey`` in their
-    secrets source before calling this method. Requires a basic-auth client
-    instance (created with ``username`` + ``password``). The operation is
-    resumable — if interrupted, call again to resume from the savepoint.
+    Re-encrypts credential api secrets, executor cloud provider credentials, and
+    per-account AI provider keys from ``old_secret_key`` to the server's
+    currently-loaded (new) SecretKey.
+
+    A credential's ``api_secret`` is stored encrypted and verified by
+    decrypt-then-compare, so it is re-encrypted too; the ``api_key`` is a stable
+    identifier that is left unchanged, so rotation does not invalidate any credential.
+
+    **Self-Hosting Only.** The operator must update ``SecretKey`` in their secrets
+    source and reload/restart the server before calling this method, then pass the
+    previous key as ``old_secret_key``. Requires a basic-auth client instance
+    (created with ``username`` + ``password``). The operation is idempotent and
+    resumable — if interrupted, call again to complete it.
 
     Returns:
-        dict: ``{"success": True, "data": {"rotated": <count>}}``
+        dict: ``{"success": True, "data": {"credentialsRotated": <count>,
+        "executorsRotated": <count>, "aiSettingsRotated": <count>}}``
     """
-    return self._post("/credentials/rotate-secret", None)
+    return self._post("/account/rotate-secret", {"oldSecretKey": old_secret_key})
 
 
 # Attach methods to Client class
@@ -102,5 +112,5 @@ Client.get_credential = get_credential
 Client.update_credential = update_credential
 Client.delete_credential = delete_credential
 Client.archive_credential = archive_credential
-Client.rotate_credential_secret = rotate_credential_secret
+Client.rotate_secret = rotate_secret
 
