@@ -97,10 +97,14 @@ class RotateSecretResponse:
 @dataclass
 class CredentialCreateRequestBody:
     created_by: str
-    # Scopes must be a non-empty subset of {"read", "write", "execute"}; the
-    # API rejects empty/unknown values with a 400.
+    # Scopes must be a non-empty subset of {"read", "write", "execute", "admin"};
+    # the API rejects empty/unknown values with a 400. The "admin" scope can only
+    # be granted by an operator or an existing admin credential.
     scopes: List[str] = field(default_factory=list)
     archived: bool = False
+    # Optional shorter lifetime in seconds. The server clamps it to its allowed
+    # range; leave as None to use the default expiry. Serialized as expiresInSeconds.
+    expires_in_seconds: Optional[int] = None
     account_id: Optional[int] = None  # Excluded from JSON
 
 
@@ -382,6 +386,35 @@ class PromptJobResponse:
     end_date: Optional[str] = None
     timezone: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class PromptProviderResult:
+    provider: str
+    model: str
+    jobs: List[PromptJobResponse]
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
+    duration_ms: int
+
+
+@dataclass
+class IntentClassification:
+    text: str = ""
+    decision: str = ""
+    reason: str = ""
+
+
+@dataclass
+class PromptResult:
+    providers: List[PromptProviderResult] = field(default_factory=list)
+    classification: Optional[IntentClassification] = None
+
+
+@dataclass
+class ClassifyPromptRequest:
+    prompt: str
 
 
 # Execution Analytics Types
