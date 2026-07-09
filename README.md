@@ -241,8 +241,15 @@ credentials = client.list_credentials(
     order_by_direction="desc",
 )
 
-# Create a new credential
-credential_body = CredentialCreateRequestBody(created_by="user@example.com")
+# Create a new credential. `scopes` is required (a non-empty subset of
+# read/write/execute/admin). Optionally pass `expires_in_seconds` for a shorter TTL
+# (the server clamps it). Granting "admin" requires an operator or an existing
+# admin credential.
+credential_body = CredentialCreateRequestBody(
+    created_by="user@example.com",
+    scopes=["read", "write", "execute"],
+    expires_in_seconds=8 * 60 * 60,  # optional (8 hours)
+)
 credential = client.create_credential(credential_body)
 
 # Get a specific credential
@@ -597,7 +604,7 @@ print(f"Raft State: {health['data']['raftStats']['state']}")
 
 ### Backup and Restore
 
-> **Note**: Backup and restore are self-hosting cluster operations and require Basic Authentication.
+> **Note**: Backup and restore are cluster-level operations. They require a credential carrying the **`admin`** scope, or Basic Authentication (operator bootstrap).
 
 ```python
 # Start an online database backup
