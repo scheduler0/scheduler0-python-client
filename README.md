@@ -698,19 +698,6 @@ pytest tests/test_client.py
 pytest -v
 ```
 
-### CI/CD
-
-This project uses GitHub Actions for continuous integration. Tests are automatically run on:
-- Push to `main`, `master`, or `develop` branches
-- Pull requests to `main`, `master`, or `develop` branches
-
-The CI pipeline includes:
-- **Tests**: Runs pytest on multiple Python versions (3.8, 3.9, 3.10, 3.11, 3.12) across Ubuntu, macOS, and Windows
-- **Build**: Builds the package and validates it can be distributed
-- **Lint**: Checks code formatting, import sorting, and basic type checking
-
-Package builds are automatically published to PyPI when tags starting with `v` are pushed (e.g., `v1.0.0`).
-
 ### Test Structure
 
 The test suite includes:
@@ -726,8 +713,4 @@ The test suite includes:
 - **test_healthcheck.py**: Health monitoring methods
 - **test_prompt.py**: AI-powered job creation methods
 - **test_types.py**: Type definition validation
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
 
