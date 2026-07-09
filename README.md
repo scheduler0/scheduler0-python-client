@@ -505,7 +505,7 @@ client.delete_job("job-id", delete_body)
 Create job configurations from natural language prompts using AI:
 
 ```python
-from scheduler0.types import PromptJobRequest, JobRequestBody
+from scheduler0.types import PromptJobRequest, ClassifyPromptRequest, JobRequestBody
 
 # Create job configurations from a natural language prompt
 prompt_request = PromptJobRequest(
@@ -517,40 +517,57 @@ prompt_request = PromptJobRequest(
     timezone="America/New_York",  # Optional IANA timezone; defaults to "UTC" when omitted.
 )
 
-# Generate job configurations from the prompt
-# Note: This endpoint requires credits and validates credentials
-job_configs = client.create_job_from_prompt(prompt_request)
+# Returns a PromptResult with .providers and optional .classification
+result = client.create_job_from_prompt(prompt_request)
 
-# job_configs is a list of PromptJobResponse dictionaries
-for config in job_configs:
-    print(f"Kind: {config.get('kind')}")
-    print(f"Cron Expression: {config.get('cronExpression')}")
-    if config.get("nextRunAt"):
-        print(f"Next Run At: {config.get('nextRunAt')}")
-    print(f"Recipients: {config.get('recipients')}")
-    
-    # Use the generated configuration to create actual jobs
-    job = JobRequestBody(
-        project_id=123,
-        timezone=config.get("timezone", "UTC"),
-        spec=config.get("cronExpression"),
-        created_by="ai-prompt",
-    )
-    
-    # Set optional fields if available
-    if config.get("startDate"):
-        job.start_date = config.get("startDate")
-    if config.get("endDate"):
-        job.end_date = config.get("endDate")
-    if config.get("subject"):
-        import json
-        job.data = json.dumps({
-            "subject": config.get("subject"),
-            "recipients": config.get("recipients", []),
-        })
-    
-    result = client.create_job(job)
-    print(f"Job created with request ID: {result.get('data')}")
+# Inspect the intent classification
+if result.classification:
+    print(f"Decision: {result.classification.decision}")  # allow / clarify / reject
+    print(f"Reason: {result.classification.reason}")
+
+# Process each provider's job configurations
+for provider in result.providers:
+    print(f"Provider: {provider.provider} / {provider.model}")
+    print(f"Tokens used: {provider.total_tokens}")
+    for config in provider.jobs:
+        print(f"Kind: {config.kind}")
+        print(f"Cron Expression: {config.cron_expression}")
+        if config.next_run_at:
+            print(f"Next Run At: {config.next_run_at}")
+        
+        # Use the generated configuration to create actual jobs
+        job = JobRequestBody(
+            project_id=123,
+            timezone=config.timezone or "UTC",
+            spec=config.cron_expression,
+            created_by="ai-prompt",
+        )
+        if config.start_date:
+            job.start_date = config.start_date
+        if config.end_date:
+            job.end_date = config.end_date
+        if config.subject:
+            import json
+            job.data = json.dumps({
+                "subject": config.subject,
+                "recipients": config.recipients or [],
+            })
+        
+        r = client.create_job(job)
+        print(f"Job created with request ID: {r.get('data')}")
+```
+
+### Classifying a prompt (without AI execution)
+
+Run only the intent classifier — no model is invoked and no credits are consumed:
+
+```python
+from scheduler0.types import ClassifyPromptRequest
+
+clf = client.classify_prompt(ClassifyPromptRequest(prompt="What is Kubernetes?"))
+print(clf.decision)  # 'reject'
+print(clf.reason)    # 'informational_question_not_schedule_request'
+```
 ```
 
 **Note**: The AI prompt endpoint requires:
