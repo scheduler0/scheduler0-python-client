@@ -388,6 +388,9 @@ class PromptJobRequest:
     recipients: Optional[List[str]] = None
     channels: Optional[List[str]] = None
     timezone: Optional[str] = None
+    # Optional BCP-47 locale (e.g. "en-US", "es-ES") forwarded to the AI model;
+    # omitted falls back to "en".
+    locale: Optional[str] = None
 
 
 @dataclass
@@ -435,6 +438,9 @@ class PromptResult:
 @dataclass
 class ClassifyPromptRequest:
     prompt: str
+    # Optional BCP-47 locale. Only English (en*) is currently supported; other
+    # locales are rejected by the server with a 400.
+    locale: Optional[str] = None
 
 
 # Execution Analytics Types
