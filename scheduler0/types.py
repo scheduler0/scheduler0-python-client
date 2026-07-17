@@ -244,6 +244,9 @@ class ProjectDeleteRequestBody:
 # Executor Types
 @dataclass
 class Executor:
+    # cloud_api_key, cloud_api_secret and webhook_secret are secrets. The server stores
+    # them encrypted and only returns them once, in the create_executor response. They are
+    # always None on get_executor, list_executors and update_executor responses.
     id: int
     account_id: int
     name: str
