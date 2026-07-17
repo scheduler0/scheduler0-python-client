@@ -437,6 +437,67 @@ class ClassifyPromptRequest:
     prompt: str
 
 
+# Conversation Suggestions Types
+@dataclass
+class SuggestionParticipant:
+    id: Optional[str] = None
+    display_name: Optional[str] = None
+    timezone: Optional[str] = None
+
+
+@dataclass
+class SuggestionMessage:
+    # speaker accepts a SuggestionParticipant or a bare display-name string.
+    speaker: Any
+    timestamp: str
+    message: str
+    id: Optional[str] = None
+
+
+@dataclass
+class SuggestionOptions:
+    """Analysis options.
+
+    locale is English only for the first release: it defaults to ``en`` and only
+    accepts ``en*`` values; any other locale is rejected by the API with
+    UNSUPPORTED_LOCALE.
+    """
+
+    reference_time: Optional[str] = None
+    locale: Optional[str] = None
+    default_timezone: Optional[str] = None
+    minimum_confidence: Optional[float] = None
+    include_low_confidence: Optional[bool] = None
+    include_resolved_obligations: Optional[bool] = None
+    default_due_time: Optional[str] = None
+    default_deadline_time: Optional[str] = None
+
+
+@dataclass
+class AnalyzeSuggestionsRequest:
+    messages: List[SuggestionMessage] = field(default_factory=list)
+    conversation_id: Optional[str] = None
+    participants: Optional[List[SuggestionParticipant]] = None
+    options: Optional[SuggestionOptions] = None
+
+
+@dataclass
+class AnalyzeSuggestionsResult:
+    """The analyzer's response.
+
+    Individual suggestions/obligations carry a rich, evolving shape owned by the
+    edge analyzer, so they are exposed as plain dicts.
+    """
+
+    request_id: Optional[str] = None
+    conversation_id: Optional[str] = None
+    analyzed_at: Optional[str] = None
+    suggestions: List[Dict[str, Any]] = field(default_factory=list)
+    obligations: List[Dict[str, Any]] = field(default_factory=list)
+    warnings: List[Dict[str, Any]] = field(default_factory=list)
+    engine: Optional[Dict[str, Any]] = None
+
+
 # Execution Analytics Types
 @dataclass
 class DateRangeAnalyticsPoint:
