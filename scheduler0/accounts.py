@@ -4,7 +4,7 @@ Account management methods for Scheduler0 client.
 
 from typing import Optional
 from .client import Client
-from .types import AccountCreateRequestBody, AccountAISettings, FeatureRequest
+from .types import AccountCreateRequestBody, AccountAISettings, ActiveModel, FeatureRequest
 
 
 def create_account(self: Client, body: AccountCreateRequestBody) -> dict:
@@ -65,8 +65,46 @@ def get_account_ai_settings(self: Client, account_id: str) -> dict:
 
 
 def upsert_account_ai_settings(self: Client, account_id: str, body: AccountAISettings) -> dict:
-    """Create or update the AI provider settings for an account."""
+    """Create or update the AI provider settings for an account.
+
+    Pass an ``active_models`` list to configure the primary model and
+    optional fallbacks.  The first entry is primary; subsequent entries
+    are tried in order if the primary fails.
+
+    Example::
+
+        from scheduler0 import Client, AccountAISettings, ActiveModel
+
+        client = Client(...)
+        client.upsert_account_ai_settings(
+            account_id="123",
+            body=AccountAISettings(
+                active_models=[
+                    ActiveModel(provider="openai", model="gpt-4.1-mini"),
+                    ActiveModel(provider="anthropic", model="claude-sonnet-4-5"),
+                ],
+                openai_api_key="sk-...",
+                anthropic_api_key="sk-ant-...",
+            ),
+        )
+    """
     return self._put("/account/ai-settings", body, account_id_override=account_id)
+
+
+def get_ai_models(self: Client) -> dict:
+    """Retrieve the per-provider approved model catalog.
+
+    Returns a dict with keys ``success`` and ``data``, where ``data`` maps
+    provider names to lists of approved model dicts (``id``, ``display_name``,
+    ``default``).
+
+    Example::
+
+        catalog = client.get_ai_models()
+        openai_models = catalog["data"]["openai"]
+        # [{"id": "gpt-4.1-mini", "display_name": "GPT-4.1 Mini", "default": True}, ...]
+    """
+    return self._get("/ai/models", params=None, account_id_override=None)
 
 
 # Attach methods to Client class
@@ -82,4 +120,5 @@ Client.get_account_tokens = get_account_tokens
 Client.add_account_tokens = add_account_tokens
 Client.get_account_ai_settings = get_account_ai_settings
 Client.upsert_account_ai_settings = upsert_account_ai_settings
+Client.get_ai_models = get_ai_models
 

@@ -27,6 +27,8 @@ from .types import (
     AccountFeature,
     AccountJobExecutionsCount,
     AccountAISettings,
+    ActiveModel,
+    ModelInfo,
     Credential,
     CredentialCreateRequestBody,
     CredentialUpdateRequestBody,
