@@ -611,6 +611,31 @@ for suggestion in result.suggestions:
     print(suggestion["type"], suggestion["reason"])
 ```
 
+### Recommending send times
+
+Recommend suitable future send times for a message given sender/recipient time zones, working hours, quiet hours, weekends, priority, and coverage rules. The engine is deterministic and does not send the message or create a job:
+
+```python
+from scheduler0.types import (
+    SendTimeSuggestionsRequest,
+    SendTimeParticipant,
+    SendTimeMessage,
+    SendTimeConstraints,
+)
+
+result = client.send_time_suggestions(SendTimeSuggestionsRequest(
+    sender=SendTimeParticipant(id="user_123", timezone="America/Toronto"),
+    recipients=[
+        SendTimeParticipant(id="user_456", timezone="America/Los_Angeles", role="primary"),
+    ],
+    message=SendTimeMessage(priority="normal"),
+    constraints=SendTimeConstraints(working_hours_only=True, avoid_weekends=True),
+))
+
+for suggestion in result.suggestions:
+    print(suggestion["send_at"], suggestion["score"], suggestion["label"])
+```
+
 **Note**: The AI prompt endpoint requires:
 - Valid API credentials (API Key + Secret)
 - Account ID header
