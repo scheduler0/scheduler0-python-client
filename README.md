@@ -194,18 +194,29 @@ added = client.add_account_tokens("account-id", 1000)
 
 ### AI Provider Settings (Bring Your Own Key)
 
-Configure a per-account model provider and key so `create_job_from_prompt` uses your own credentials. Supported providers: `openai`, `anthropic`, `bedrock`. Credential fields are encrypted at rest and never returned in plaintext by `get_account_ai_settings`.
+Configure an ordered list of active models (primary + fallbacks) per account. When `create_job_from_prompt` is called, the primary model is tried first; if it fails the next fallback is tried. Supported providers: `openai`, `anthropic`, `bedrock`, `openrouter`. Credential fields are encrypted at rest and never returned in plaintext.
+
+Use `get_ai_models()` to fetch the per-provider approved model catalog before configuring settings.
 
 ```python
-from scheduler0.types import AccountAISettings
+from scheduler0 import Client, AccountAISettings, ActiveModel
+
+client = Client(...)
+
+# Fetch the approved model catalog
+catalog = client.get_ai_models()
+# catalog["data"] = {"openai": [{"id": "gpt-4.1-mini", "display_name": "...", "default": True}, ...], ...}
 
 # Read current settings (keys are redacted)
 settings = client.get_account_ai_settings("account-id")
 
-# Save settings
+# Save settings with primary + fallback
 saved = client.upsert_account_ai_settings("account-id", AccountAISettings(
-    provider="anthropic",
-    model="claude-sonnet-4-5",  # optional; provider default used when empty
+    active_models=[
+        ActiveModel(provider="openai", model="gpt-4.1-mini"),        # primary
+        ActiveModel(provider="anthropic", model="claude-sonnet-4-5"), # fallback
+    ],
+    openai_api_key="sk-...",
     anthropic_api_key="sk-ant-...",
 ))
 ```

@@ -41,15 +41,32 @@ class AccountJobExecutionsCount:
 
 
 @dataclass
+class ActiveModel:
+    """A single entry in the ordered active-model list."""
+    provider: str
+    model: str
+
+
+@dataclass
+class ModelInfo:
+    """Approved model info returned by get_ai_models()."""
+    id: str
+    display_name: str
+    default: Optional[bool] = None
+
+
+@dataclass
 class AccountAISettings:
     account_id: Optional[int] = None
     provider: Optional[str] = None
     model: Optional[str] = None
+    active_models: Optional[List[ActiveModel]] = None
     openai_api_key: Optional[str] = None
     anthropic_api_key: Optional[str] = None
     bedrock_access_key_id: Optional[str] = None
     bedrock_secret_key: Optional[str] = None
     bedrock_region: Optional[str] = None
+    openrouter_api_key: Optional[str] = None
     date_created: Optional[str] = None
     date_modified: Optional[str] = None
 
