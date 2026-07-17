@@ -65,7 +65,7 @@ def analyze_suggestions(
     payload = _to_payload(body)
     account_id = self._resolve_account_id(body, account_id_override)
     headers = self._prepare_headers(account_id)
-    url = self._build_url("/suggestions/analyze")
+    url = self._build_url("/ai/suggestions/analyze")
 
     response = self.session.request(
         method="POST",
@@ -121,7 +121,7 @@ def send_time_suggestions(
     payload = _to_payload(body)
     account_id = self._resolve_account_id(body, account_id_override)
     headers = self._prepare_headers(account_id)
-    url = self._build_url("/send-time-suggestions")
+    url = self._build_url("/ai/send-time-suggestions")
 
     response = self.session.request(
         method="POST",
