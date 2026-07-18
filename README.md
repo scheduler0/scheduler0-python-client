@@ -183,9 +183,21 @@ result = client.add_feature_to_account("account-id", feature)
 # Remove feature from account
 client.remove_feature_from_account("account-id", feature)
 
+# Rename an account
+from scheduler0 import AccountUpdateRequestBody
+client.update_account("account-id", AccountUpdateRequestBody(name="New Name"))
+
 # Get / increase the account's monthly execution count
 count = client.get_account_execution_count("account-id")
 increased = client.increase_account_execution_count("account-id", 10000)
+
+# Get / increase the account's monthly AI classify-request quota
+classify = client.get_account_classify_count("account-id")
+classify_bumped = client.increase_account_classify_count("account-id", 1000)
+
+# Get / increase the account's monthly AI prompt-request quota
+prompt = client.get_account_prompt_count("account-id")
+prompt_bumped = client.increase_account_prompt_count("account-id", 1000)
 
 # Get / add platform tokens
 tokens = client.get_account_tokens("account-id")
@@ -219,6 +231,23 @@ saved = client.upsert_account_ai_settings("account-id", AccountAISettings(
     openai_api_key="sk-...",
     anthropic_api_key="sk-ant-...",
 ))
+```
+
+### AI Prompt Request Log
+
+Retrieve the account's AI prompt-request history with optional filters and pagination.
+
+```python
+log = client.list_prompt_requests(
+    provider="openai",
+    status="success",
+    search="reminder",
+    limit=25,
+    offset=0,
+)
+# log.total, log.limit, log.offset, log.requests: List[PromptRequest]
+for req in log.requests:
+    print(req.model, req.total_tokens, req.estimated_cost_usd, req.status)
 ```
 
 ### Managing Features

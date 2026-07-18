@@ -30,11 +30,39 @@ class AccountCreateRequestBody:
 
 
 @dataclass
+class AccountUpdateRequestBody:
+    name: str
+    account_id: Optional[int] = None  # Excluded from JSON
+
+
+@dataclass
 class AccountJobExecutionsCount:
     id: int
     account_id: int
     execution_count: int
     tokens: int
+    date_created: str
+    date_modified: str
+    next_reset_date: str
+
+
+@dataclass
+class AccountClassifyRequestsCount:
+    """Remaining monthly AI classify-request quota for an account."""
+    id: int
+    account_id: int
+    request_count: int
+    date_created: str
+    date_modified: str
+    next_reset_date: str
+
+
+@dataclass
+class AccountPromptRequestsCount:
+    """Remaining monthly AI prompt-request quota for an account."""
+    id: int
+    account_id: int
+    request_count: int
     date_created: str
     date_modified: str
     next_reset_date: str
@@ -441,6 +469,34 @@ class IntentClassification:
 class PromptResult:
     providers: List[PromptProviderResult] = field(default_factory=list)
     classification: Optional[IntentClassification] = None
+
+
+@dataclass
+class PromptRequest:
+    """A single persisted AI prompt execution from the prompt-request log."""
+    id: int = 0
+    account_id: int = 0
+    prompt: str = ""
+    provider: str = ""
+    model: str = ""
+    output: str = ""
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_tokens: int = 0
+    duration_ms: int = 0
+    estimated_cost_usd: float = 0.0
+    status: str = ""
+    error: Optional[str] = None
+    date_created: str = ""
+
+
+@dataclass
+class PromptRequestsResult:
+    """Paginated result for the AI prompt-request log."""
+    requests: List[PromptRequest] = field(default_factory=list)
+    total: int = 0
+    limit: int = 0
+    offset: int = 0
 
 
 @dataclass

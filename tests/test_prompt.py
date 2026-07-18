@@ -7,6 +7,7 @@ from unittest.mock import patch, Mock
 from scheduler0.types import (
     PromptJobRequest,
     PromptResult,
+    PromptRequestsResult,
     IntentClassification,
     ClassifyPromptRequest,
 )
@@ -137,3 +138,43 @@ class TestPrompt:
         mock_request.assert_called_once_with(
             "POST", "/ai/prompt/classify", body=body, params=None, account_id_override=None
         )
+
+    @patch('scheduler0.client.Client._get')
+    def test_list_prompt_requests(self, mock_get, client):
+        """Test list_prompt_requests parses the paginated log into typed results."""
+        mock_get.return_value = {
+            "success": True,
+            "data": {
+                "requests": [
+                    {
+                        "id": 1,
+                        "account_id": 123,
+                        "prompt": "Remind me every Monday",
+                        "provider": "openai",
+                        "model": "gpt-4.1-mini",
+                        "output": "{}",
+                        "input_tokens": 100,
+                        "output_tokens": 50,
+                        "total_tokens": 150,
+                        "duration_ms": 420,
+                        "estimated_cost_usd": 0.0001,
+                        "status": "success",
+                        "date_created": "2025-01-01T00:00:00Z",
+                    }
+                ],
+                "total": 1,
+                "limit": 25,
+                "offset": 0,
+            },
+        }
+
+        result = client.list_prompt_requests(provider="openai", status="success", limit=25, offset=0)
+        assert isinstance(result, PromptRequestsResult)
+        assert result.total == 1
+        assert len(result.requests) == 1
+        assert result.requests[0].model == "gpt-4.1-mini"
+        assert result.requests[0].total_tokens == 150
+        args, kwargs = mock_get.call_args
+        assert args[0] == "/ai/prompt-requests"
+        assert kwargs["params"]["provider"] == "openai"
+        assert kwargs["params"]["status"] == "success"
