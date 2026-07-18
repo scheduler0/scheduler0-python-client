@@ -121,7 +121,7 @@ class TestSendTimeSuggestions:
         assert result.suggestions[0]["id"] == "sts_001"
 
         _, kwargs = mock_request.call_args
-        assert kwargs["url"].endswith("/api/v1/ai/send-time-suggestions")
+        assert kwargs["url"].endswith("/api/v1/ai/suggestions/time")
         assert kwargs["method"] == "POST"
         payload = kwargs["json"]
         assert payload["recipients"][0]["timezone"] == "America/Los_Angeles"
