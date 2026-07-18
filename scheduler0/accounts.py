@@ -61,7 +61,7 @@ def add_account_tokens(self: Client, account_id: str, amount: int) -> dict:
 
 def get_account_ai_settings(self: Client, account_id: str) -> dict:
     """Get the AI provider settings for an account."""
-    return self._get("/account/ai-settings", params=None, account_id_override=account_id)
+    return self._get("/ai/settings", params=None, account_id_override=account_id)
 
 
 def upsert_account_ai_settings(self: Client, account_id: str, body: AccountAISettings) -> dict:
@@ -88,7 +88,7 @@ def upsert_account_ai_settings(self: Client, account_id: str, body: AccountAISet
             ),
         )
     """
-    return self._put("/account/ai-settings", body, account_id_override=account_id)
+    return self._put("/ai/settings", body, account_id_override=account_id)
 
 
 def get_ai_models(self: Client) -> dict:

@@ -498,6 +498,141 @@ class AnalyzeSuggestionsResult:
     engine: Optional[Dict[str, Any]] = None
 
 
+# Send-Time Suggestions Types
+# The engine is deterministic scheduling/time-zone math (no LLM). All field names
+# are snake_case to match the API contract.
+@dataclass
+class SendTimeWorkingHours:
+    days: Optional[List[str]] = None
+    start: Optional[str] = None
+    end: Optional[str] = None
+
+
+@dataclass
+class SendTimeQuietHours:
+    start: Optional[str] = None
+    end: Optional[str] = None
+
+
+@dataclass
+class SendTimeParticipant:
+    timezone: str
+    id: Optional[str] = None
+    display_name: Optional[str] = None
+    role: Optional[str] = None
+    working_hours: Optional[SendTimeWorkingHours] = None
+    quiet_hours: Optional[SendTimeQuietHours] = None
+
+
+@dataclass
+class SendTimeMessage:
+    channel: Optional[str] = None
+    priority: Optional[str] = None
+    intent: Optional[str] = None
+    text: Optional[str] = None
+    estimated_attention: Optional[str] = None
+
+
+@dataclass
+class SendTimeConstraints:
+    earliest_send_at: Optional[str] = None
+    latest_send_at: Optional[str] = None
+    minimum_delay_seconds: Optional[int] = None
+    working_hours_only: Optional[bool] = None
+    avoid_weekends: Optional[bool] = None
+    avoid_holidays: Optional[bool] = None
+    respect_quiet_hours: Optional[bool] = None
+    require_calendar_free: Optional[bool] = None
+
+
+@dataclass
+class SendTimeWindow:
+    start: str
+    end: str
+
+
+@dataclass
+class SendTimePreferences:
+    preferred_recipient_windows: Optional[List[SendTimeWindow]] = None
+    avoid_recipient_windows: Optional[List[SendTimeWindow]] = None
+    prefer_sender_recipient_overlap: Optional[bool] = None
+
+
+@dataclass
+class SendTimeGroupPolicy:
+    strategy: Optional[str] = None
+    minimum_recipient_coverage: Optional[float] = None
+
+
+@dataclass
+class SendTimeOptions:
+    reference_time: Optional[str] = None
+    suggestion_count: Optional[int] = None
+    candidate_interval_minutes: Optional[int] = None
+    locale: Optional[str] = None
+    include_score_breakdown: Optional[bool] = None
+    include_rejected_summary: Optional[bool] = None
+    search_horizon_days: Optional[int] = None
+    evaluate_send_now: Optional[bool] = None
+    diversify_suggestions: Optional[bool] = None
+    minimum_suggestion_spacing_minutes: Optional[int] = None
+
+
+@dataclass
+class SendTimeHolidayPolicy:
+    country: Optional[str] = None
+    region: Optional[str] = None
+    calendar_id: Optional[str] = None
+    dates: Optional[List[str]] = None
+
+
+@dataclass
+class SendTimeBusyInterval:
+    start: str
+    end: str
+
+
+@dataclass
+class SendTimeAvailability:
+    participant_id: str
+    busy_intervals: Optional[List[SendTimeBusyInterval]] = None
+
+
+@dataclass
+class SendTimeSuggestionsRequest:
+    recipients: List[SendTimeParticipant] = field(default_factory=list)
+    sender: Optional[SendTimeParticipant] = None
+    message: Optional[SendTimeMessage] = None
+    constraints: Optional[SendTimeConstraints] = None
+    preferences: Optional[SendTimePreferences] = None
+    group_policy: Optional[SendTimeGroupPolicy] = None
+    options: Optional[SendTimeOptions] = None
+    holiday_policy: Optional[SendTimeHolidayPolicy] = None
+    availability: Optional[List[SendTimeAvailability]] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class SendTimeSuggestionsResult:
+    """The send-time engine's response.
+
+    The top-level fields are typed; individual suggestions and the search /
+    send_now blocks carry a rich, evolving shape, so they are exposed as dicts.
+    """
+
+    request_id: Optional[str] = None
+    reference_time: Optional[str] = None
+    policy: Optional[Dict[str, Any]] = None
+    engine: Optional[Dict[str, Any]] = None
+    suggestions: List[Dict[str, Any]] = field(default_factory=list)
+    search: Optional[Dict[str, Any]] = None
+    rejected_summary: Optional[Dict[str, int]] = None
+    no_suggestion: Optional[Dict[str, Any]] = None
+    send_now: Optional[Dict[str, Any]] = None
+    warnings: List[Dict[str, Any]] = field(default_factory=list)
+    metadata: Optional[Dict[str, Any]] = None
+
+
 # Execution Analytics Types
 @dataclass
 class DateRangeAnalyticsPoint:

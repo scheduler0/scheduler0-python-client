@@ -44,7 +44,7 @@ def create_job_from_prompt(
         PromptResult with providers (list of PromptProviderResult) and an optional
         IntentClassification containing the full classifier output.
     """
-    response = self._request("POST", "/prompt", body=body, params=None, account_id_override=account_id_override)
+    response = self._request("POST", "/ai/prompt", body=body, params=None, account_id_override=account_id_override)
     data: Dict[str, Any] = response.json()["data"]
 
     providers = []
@@ -99,7 +99,7 @@ def classify_prompt(
     Returns:
         IntentClassification with the full classifier output.
     """
-    response = self._request("POST", "/prompt/classify", body=body, params=None, account_id_override=account_id_override)
+    response = self._request("POST", "/ai/prompt/classify", body=body, params=None, account_id_override=account_id_override)
     data: Dict[str, Any] = response.json()["data"]
     return _parse_classification(data.get("classification")) or IntentClassification()
 
