@@ -17,6 +17,7 @@ from . import features
 from . import async_tasks
 from . import healthcheck
 from . import prompt
+from . import suggestions
 from . import backup
 from . import local_executors
 
@@ -54,6 +55,11 @@ from .types import (
     RaftStats,
     PromptJobRequest,
     PromptJobResponse,
+    SuggestionParticipant,
+    SuggestionMessage,
+    SuggestionOptions,
+    AnalyzeSuggestionsRequest,
+    AnalyzeSuggestionsResult,
     LocalExecutorRegisterRequest,
     LocalExecutionReport,
 )
@@ -96,6 +102,11 @@ __all__ = [
     "RaftStats",
     "PromptJobRequest",
     "PromptJobResponse",
+    "SuggestionParticipant",
+    "SuggestionMessage",
+    "SuggestionOptions",
+    "AnalyzeSuggestionsRequest",
+    "AnalyzeSuggestionsResult",
     "LocalExecutorRegisterRequest",
     "LocalExecutionReport",
 ]
