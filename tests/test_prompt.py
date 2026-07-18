@@ -67,7 +67,7 @@ class TestPrompt:
         assert result.classification.decision == "allow"
         assert result.classification.reason == "request_with_temporal_signal"
         mock_request.assert_called_once_with(
-            "POST", "/prompt", body=body, params=None, account_id_override=None
+            "POST", "/ai/prompt", body=body, params=None, account_id_override=None
         )
 
     @patch('scheduler0.client.Client._request')
@@ -135,5 +135,5 @@ class TestPrompt:
         assert result.decision == "reject"
         assert result.reason == "informational_question_not_schedule_request"
         mock_request.assert_called_once_with(
-            "POST", "/prompt/classify", body=body, params=None, account_id_override=None
+            "POST", "/ai/prompt/classify", body=body, params=None, account_id_override=None
         )
