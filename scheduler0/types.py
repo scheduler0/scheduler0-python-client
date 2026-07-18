@@ -251,6 +251,10 @@ class Executor:
     account_id: int
     name: str
     type: str
+    # description and tags describe what the executor does. They are used by the
+    # /ai/schedule endpoint to match an executor to a prompt's purpose and channels.
+    description: Optional[str] = None
+    tags: Optional[List[str]] = None
     region: Optional[str] = None
     cloud_provider: Optional[str] = None
     cloud_resource_url: Optional[str] = None
@@ -272,6 +276,8 @@ class ExecutorRequestBody:
     name: str
     type: str
     created_by: str
+    description: Optional[str] = None
+    tags: Optional[List[str]] = None
     region: Optional[str] = None
     cloud_provider: Optional[str] = None
     cloud_resource_url: Optional[str] = None
@@ -288,6 +294,8 @@ class ExecutorUpdateRequestBody:
     name: str
     type: str
     modified_by: str
+    description: Optional[str] = None
+    tags: Optional[List[str]] = None
     region: Optional[str] = None
     cloud_provider: Optional[str] = None
     cloud_resource_url: Optional[str] = None
@@ -435,6 +443,47 @@ class PromptResult:
 @dataclass
 class ClassifyPromptRequest:
     prompt: str
+
+
+# Schedule-from-prompt Types (POST /ai/schedule)
+@dataclass
+class ScheduleProjectInput:
+    """Create-or-reuse a project by name. Ignored when project_id is set."""
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+
+@dataclass
+class SchedulePromptRequest:
+    prompt: str
+    purposes: Optional[List[str]] = None
+    events: Optional[List[str]] = None
+    recipients: Optional[List[str]] = None
+    channels: Optional[List[str]] = None
+    timezone: Optional[str] = None
+    locale: Optional[str] = None
+    # project_id reuses an existing project; takes precedence over project.
+    project_id: Optional[int] = None
+    # project creates-or-reuses a project by name when project_id is absent.
+    project: Optional[ScheduleProjectInput] = None
+    # executor_id pins a specific executor and skips LLM matching.
+    executor_id: Optional[int] = None
+    # created_by is required; stamped on the created project and jobs.
+    created_by: Optional[str] = None
+    account_id: Optional[int] = None  # Excluded from JSON
+
+
+@dataclass
+class ScheduleResult:
+    classification: Optional[IntentClassification] = None
+    project: Optional[Dict[str, Any]] = None
+    project_created: bool = False
+    executor: Optional[Dict[str, Any]] = None
+    executor_matched_by: str = ""
+    executor_match_reason: Optional[str] = None
+    jobs: List[Dict[str, Any]] = field(default_factory=list)
+    provider: Optional[str] = None
+    model: Optional[str] = None
 
 
 # Conversation Suggestions Types

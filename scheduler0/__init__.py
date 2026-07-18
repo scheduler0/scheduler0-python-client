@@ -18,6 +18,7 @@ from . import async_tasks
 from . import healthcheck
 from . import prompt
 from . import suggestions
+from . import schedule
 from . import backup
 from . import local_executors
 
@@ -74,6 +75,9 @@ from .types import (
     SendTimeAvailability,
     SendTimeSuggestionsRequest,
     SendTimeSuggestionsResult,
+    ScheduleProjectInput,
+    SchedulePromptRequest,
+    ScheduleResult,
     LocalExecutorRegisterRequest,
     LocalExecutionReport,
 )
@@ -135,6 +139,9 @@ __all__ = [
     "SendTimeAvailability",
     "SendTimeSuggestionsRequest",
     "SendTimeSuggestionsResult",
+    "ScheduleProjectInput",
+    "SchedulePromptRequest",
+    "ScheduleResult",
     "LocalExecutorRegisterRequest",
     "LocalExecutionReport",
 ]

@@ -331,13 +331,16 @@ executors = client.list_executors(
     order_by_direction="desc",
 )
 
-# Create a webhook executor
+# Create a webhook executor. `description` and `tags` are optional and are used by the
+# /ai/schedule endpoint to match an executor to a prompt's purpose and channels.
 executor = ExecutorRequestBody(
     name="webhook-executor",
     type="webhook_url",
     webhook_url="https://example.com/webhook",
     webhook_method="POST",
     webhook_secret="secret-key",
+    description="Sends transactional email to customers",
+    tags=["email", "notifications"],
     created_by="user@example.com",
 )
 result = client.create_executor(executor)
@@ -636,6 +639,31 @@ for suggestion in result.suggestions:
     print(suggestion["send_at"], suggestion["score"], suggestion["label"])
 ```
 
+### Scheduling from a Prompt
+
+Turn a natural-language prompt into actually-scheduled jobs in one call. The server runs the prompt pipeline (intent guardrail + generation), resolves or creates a project, picks the executor whose `description`/`tags` best match the prompt (or uses a pinned `executor_id` / the account's only executor), and creates the jobs synchronously:
+
+```python
+from scheduler0 import SchedulePromptRequest, ScheduleProjectInput
+
+result = client.schedule_from_prompt(SchedulePromptRequest(
+    prompt="Remind the sales team every Monday at 9am to review the pipeline",
+    channels=["email"],
+    created_by="victor",
+    # Optional: pin a project or executor, otherwise they are resolved/created for you.
+    # project=ScheduleProjectInput(name="Sales reminders"),
+    # executor_id=3,
+))
+
+print(
+    f"project {result.project['id']} (created={result.project_created}), "
+    f"executor {result.executor['id']} matched by {result.executor_matched_by}, "
+    f"{len(result.jobs)} jobs created"
+)
+```
+
+Executor selection uses each executor's `description` and `tags` (set them on `create_executor` / `update_executor`). When the account has more than one executor and no `executor_id` is pinned, the model picks the best match; if it cannot confidently match, the call raises `requests.HTTPError` with a `409` status (pin an `executor_id` or refine descriptions/tags). A prompt rejected by the intent guardrail raises `requests.HTTPError` with a `422` status.
+
 **Note**: The AI prompt endpoint requires:
 - Valid API credentials (API Key + Secret)
 - Account ID header
@@ -729,6 +757,7 @@ Most endpoints require the `X-Account-ID` header. The following endpoints requir
 - `/api/v1/async-tasks/*`
 - `/api/v1/executions`
 - `/api/v1/ai/prompt` (AI prompt endpoint)
+- `/api/v1/ai/schedule` (prompt-to-scheduled-jobs endpoint)
 
 Account endpoints (`/api/v1/accounts/*`) and features (`/api/v1/features`) do not require account ID.
 
