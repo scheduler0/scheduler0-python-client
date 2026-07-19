@@ -341,6 +341,48 @@ class ExecutorDeleteRequestBody:
     account_id: Optional[int] = None  # Excluded from JSON
 
 
+@dataclass
+class TestInvocationRequestBody:
+    """Optional body for Client.test_invoke_executor. All fields are optional;
+    an empty body invokes the executor with a default synthetic job.
+
+    - job: standard job attributes to include in the invocation payload.
+      Server-managed fields (id, account_id, executor_id, date_created,
+      last_execution_date) are ignored and overridden by the server.
+    - age: how old the synthetic job entry should appear, as a Go duration
+      string (e.g. "24h", "1h30m", "15m"). Sets the job's date_created and
+      last_execution_date to now-age.
+    - execution_time: the moment the job is treated as executing at (RFC3339).
+      Becomes the payload's lastExecutionDateTime. Defaults to now.
+    """
+    job: Optional["Job"] = None
+    age: Optional[str] = None
+    execution_time: Optional[str] = None
+    account_id: Optional[int] = None  # Excluded from JSON
+
+
+@dataclass
+class JobInvocationPayload:
+    """The payload delivered to an executor when a job fires."""
+    job: Optional[Job] = None
+    last_execution_date_time: Optional[str] = None
+    last_execution_status: Optional[str] = None
+
+
+@dataclass
+class TestInvocationResult:
+    """Outcome of a test invocation."""
+    test: bool = False
+    executor_id: Optional[int] = None
+    executor_type: Optional[str] = None
+    success: bool = False
+    error: Optional[str] = None
+    started_at: Optional[str] = None
+    finished_at: Optional[str] = None
+    duration_ms: Optional[int] = None
+    payload: Optional[JobInvocationPayload] = None
+
+
 # Execution Types
 @dataclass
 class Execution:

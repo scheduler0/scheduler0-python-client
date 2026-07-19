@@ -402,6 +402,18 @@ result = client.update_executor("executor-id", update)
 # Delete an executor
 delete_body = ExecutorDeleteRequestBody(deleted_by="user@example.com")
 client.delete_executor("executor-id", delete_body)
+
+# Test-invoke an executor with a synthetic job — fires immediately (no waiting
+# for the cron spec/start date) and has no side effects (nothing is persisted
+# or rescheduled). The body is optional; pass None to use a default synthetic job.
+test_body = TestInvocationRequestBody(
+    job=Job(spec="0 2 * * *", data='{"action": "process_data"}', timezone="UTC", retry_max=2),
+    age="24h",                       # how old the synthetic entry should appear
+    execution_time="2024-01-15T02:00:00Z",  # optional; defaults to now
+)
+result = client.test_invoke_executor("executor-id", test_body)
+# HTTP 200 even when the target fails; check result["data"]["success"].
+print("invocation succeeded:", result["data"]["success"])
 ```
 
 ### Managing Local Executors
