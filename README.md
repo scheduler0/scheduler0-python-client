@@ -183,9 +183,21 @@ result = client.add_feature_to_account("account-id", feature)
 # Remove feature from account
 client.remove_feature_from_account("account-id", feature)
 
+# Rename an account
+from scheduler0 import AccountUpdateRequestBody
+client.update_account("account-id", AccountUpdateRequestBody(name="New Name"))
+
 # Get / increase the account's monthly execution count
 count = client.get_account_execution_count("account-id")
 increased = client.increase_account_execution_count("account-id", 10000)
+
+# Get / increase the account's monthly AI classify-request quota
+classify = client.get_account_classify_count("account-id")
+classify_bumped = client.increase_account_classify_count("account-id", 1000)
+
+# Get / increase the account's monthly AI prompt-request quota
+prompt = client.get_account_prompt_count("account-id")
+prompt_bumped = client.increase_account_prompt_count("account-id", 1000)
 
 # Get / add platform tokens
 tokens = client.get_account_tokens("account-id")
@@ -219,6 +231,23 @@ saved = client.upsert_account_ai_settings("account-id", AccountAISettings(
     openai_api_key="sk-...",
     anthropic_api_key="sk-ant-...",
 ))
+```
+
+### AI Prompt Request Log
+
+Retrieve the account's AI prompt-request history with optional filters and pagination.
+
+```python
+log = client.list_prompt_requests(
+    provider="openai",
+    status="success",
+    search="reminder",
+    limit=25,
+    offset=0,
+)
+# log.total, log.limit, log.offset, log.requests: List[PromptRequest]
+for req in log.requests:
+    print(req.model, req.total_tokens, req.estimated_cost_usd, req.status)
 ```
 
 ### Managing Features
@@ -331,13 +360,16 @@ executors = client.list_executors(
     order_by_direction="desc",
 )
 
-# Create a webhook executor
+# Create a webhook executor. `description` and `tags` are optional and are used by the
+# /ai/schedule endpoint to match an executor to a prompt's purpose and channels.
 executor = ExecutorRequestBody(
     name="webhook-executor",
     type="webhook_url",
     webhook_url="https://example.com/webhook",
     webhook_method="POST",
     webhook_secret="secret-key",
+    description="Sends transactional email to customers",
+    tags=["email", "notifications"],
     created_by="user@example.com",
 )
 result = client.create_executor(executor)
@@ -611,6 +643,56 @@ for suggestion in result.suggestions:
     print(suggestion["type"], suggestion["reason"])
 ```
 
+### Recommending send times
+
+Recommend suitable future send times for a message given sender/recipient time zones, working hours, quiet hours, weekends, priority, and coverage rules. The engine is deterministic and does not send the message or create a job:
+
+```python
+from scheduler0.types import (
+    SendTimeSuggestionsRequest,
+    SendTimeParticipant,
+    SendTimeMessage,
+    SendTimeConstraints,
+)
+
+result = client.send_time_suggestions(SendTimeSuggestionsRequest(
+    sender=SendTimeParticipant(id="user_123", timezone="America/Toronto"),
+    recipients=[
+        SendTimeParticipant(id="user_456", timezone="America/Los_Angeles", role="primary"),
+    ],
+    message=SendTimeMessage(priority="normal"),
+    constraints=SendTimeConstraints(working_hours_only=True, avoid_weekends=True),
+))
+
+for suggestion in result.suggestions:
+    print(suggestion["send_at"], suggestion["score"], suggestion["label"])
+```
+
+### Scheduling from a Prompt
+
+Turn a natural-language prompt into actually-scheduled jobs in one call. The server runs the prompt pipeline (intent guardrail + generation), resolves or creates a project, picks the executor whose `description`/`tags` best match the prompt (or uses a pinned `executor_id` / the account's only executor), and creates the jobs synchronously:
+
+```python
+from scheduler0 import SchedulePromptRequest, ScheduleProjectInput
+
+result = client.schedule_from_prompt(SchedulePromptRequest(
+    prompt="Remind the sales team every Monday at 9am to review the pipeline",
+    channels=["email"],
+    created_by="victor",
+    # Optional: pin a project or executor, otherwise they are resolved/created for you.
+    # project=ScheduleProjectInput(name="Sales reminders"),
+    # executor_id=3,
+))
+
+print(
+    f"project {result.project['id']} (created={result.project_created}), "
+    f"executor {result.executor['id']} matched by {result.executor_matched_by}, "
+    f"{len(result.jobs)} jobs created"
+)
+```
+
+Executor selection uses each executor's `description` and `tags` (set them on `create_executor` / `update_executor`). When the account has more than one executor and no `executor_id` is pinned, the model picks the best match; if it cannot confidently match, the call raises `requests.HTTPError` with a `409` status (pin an `executor_id` or refine descriptions/tags). A prompt rejected by the intent guardrail raises `requests.HTTPError` with a `422` status.
+
 **Note**: The AI prompt endpoint requires:
 - Valid API credentials (API Key + Secret)
 - Account ID header
@@ -703,7 +785,8 @@ Most endpoints require the `X-Account-ID` header. The following endpoints requir
 - `/api/v1/executors/*`
 - `/api/v1/async-tasks/*`
 - `/api/v1/executions`
-- `/api/v1/prompt` (AI prompt endpoint)
+- `/api/v1/ai/prompt` (AI prompt endpoint)
+- `/api/v1/ai/schedule` (prompt-to-scheduled-jobs endpoint)
 
 Account endpoints (`/api/v1/accounts/*`) and features (`/api/v1/features`) do not require account ID.
 
@@ -724,7 +807,7 @@ For other methods, the Account ID can be set in the request body's `account_id` 
 
 ## Credits and AI Features
 
-The AI prompt endpoint (`/api/v1/prompt`) requires:
+The AI prompt endpoint (`/api/v1/ai/prompt`) requires:
 - **Credits**: 1 credit per prompt execution
 - **Authentication**: Valid API Key + Secret credentials
 - **Account ID**: Required header for credit deduction

@@ -4,7 +4,7 @@ Account management methods for Scheduler0 client.
 
 from typing import Optional
 from .client import Client
-from .types import AccountCreateRequestBody, AccountAISettings, ActiveModel, FeatureRequest
+from .types import AccountCreateRequestBody, AccountUpdateRequestBody, AccountAISettings, ActiveModel, FeatureRequest
 
 
 def create_account(self: Client, body: AccountCreateRequestBody) -> dict:
@@ -15,6 +15,11 @@ def create_account(self: Client, body: AccountCreateRequestBody) -> dict:
 def get_account(self: Client, account_id: str) -> dict:
     """Get account details by ID."""
     return self._get(f"/accounts/{account_id}", params=None, account_id_override=None)
+
+
+def update_account(self: Client, account_id: str, body: AccountUpdateRequestBody) -> dict:
+    """Update an account (e.g. rename)."""
+    return self._put(f"/accounts/{account_id}", body, account_id_override=None)
 
 
 def add_feature_to_account(self: Client, account_id: str, body: FeatureRequest) -> dict:
@@ -48,6 +53,28 @@ def increase_account_execution_count(self: Client, account_id: str, count: int) 
     return self._put(f"/accounts/{account_id}/execution-count", body, account_id_override=account_id)
 
 
+def get_account_classify_count(self: Client, account_id: str) -> dict:
+    """Get the remaining monthly AI classify-request quota for an account."""
+    return self._get(f"/accounts/{account_id}/classify-count", params=None, account_id_override=account_id)
+
+
+def increase_account_classify_count(self: Client, account_id: str, count: int) -> dict:
+    """Increase the AI classify-request quota for an account."""
+    body = {"count": count}
+    return self._put(f"/accounts/{account_id}/classify-count", body, account_id_override=account_id)
+
+
+def get_account_prompt_count(self: Client, account_id: str) -> dict:
+    """Get the remaining monthly AI prompt-request quota for an account."""
+    return self._get(f"/accounts/{account_id}/prompt-count", params=None, account_id_override=account_id)
+
+
+def increase_account_prompt_count(self: Client, account_id: str, count: int) -> dict:
+    """Increase the AI prompt-request quota for an account."""
+    body = {"count": count}
+    return self._put(f"/accounts/{account_id}/prompt-count", body, account_id_override=account_id)
+
+
 def get_account_tokens(self: Client, account_id: str) -> dict:
     """Get the current token balance for an account."""
     return self._get(f"/accounts/{account_id}/tokens", params=None, account_id_override=account_id)
@@ -61,7 +88,7 @@ def add_account_tokens(self: Client, account_id: str, amount: int) -> dict:
 
 def get_account_ai_settings(self: Client, account_id: str) -> dict:
     """Get the AI provider settings for an account."""
-    return self._get("/account/ai-settings", params=None, account_id_override=account_id)
+    return self._get("/ai/settings", params=None, account_id_override=account_id)
 
 
 def upsert_account_ai_settings(self: Client, account_id: str, body: AccountAISettings) -> dict:
@@ -88,7 +115,7 @@ def upsert_account_ai_settings(self: Client, account_id: str, body: AccountAISet
             ),
         )
     """
-    return self._put("/account/ai-settings", body, account_id_override=account_id)
+    return self._put("/ai/settings", body, account_id_override=account_id)
 
 
 def get_ai_models(self: Client) -> dict:
@@ -110,12 +137,17 @@ def get_ai_models(self: Client) -> dict:
 # Attach methods to Client class
 Client.create_account = create_account
 Client.get_account = get_account
+Client.update_account = update_account
 Client.add_feature_to_account = add_feature_to_account
 Client.remove_feature_from_account = remove_feature_from_account
 Client.add_all_features_to_account = add_all_features_to_account
 Client.remove_all_features_from_account = remove_all_features_from_account
 Client.get_account_execution_count = get_account_execution_count
 Client.increase_account_execution_count = increase_account_execution_count
+Client.get_account_classify_count = get_account_classify_count
+Client.increase_account_classify_count = increase_account_classify_count
+Client.get_account_prompt_count = get_account_prompt_count
+Client.increase_account_prompt_count = increase_account_prompt_count
 Client.get_account_tokens = get_account_tokens
 Client.add_account_tokens = add_account_tokens
 Client.get_account_ai_settings = get_account_ai_settings
