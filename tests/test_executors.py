@@ -8,6 +8,8 @@ from scheduler0.types import (
     ExecutorRequestBody,
     ExecutorUpdateRequestBody,
     ExecutorDeleteRequestBody,
+    TestInvocationRequestBody,
+    Job,
 )
 
 
@@ -89,4 +91,34 @@ class TestExecutors:
         body = ExecutorDeleteRequestBody(deleted_by="user@example.com")
         client.delete_executor("1", body)
         mock_delete.assert_called_once_with("/executors/1", body, account_id_override=None)
+
+    @patch('scheduler0.client.Client._post')
+    def test_test_invoke_executor(self, mock_post, client):
+        """Test test-invoking an executor with a synthetic job."""
+        mock_post.return_value = {
+            "success": True,
+            "data": {
+                "test": True,
+                "executorId": 1,
+                "executorType": "webhook_url",
+                "success": True,
+                "durationMs": 142,
+            },
+        }
+        body = TestInvocationRequestBody(
+            job=Job(spec="0 2 * * *", data="{}", timezone="UTC", retry_max=2),
+            age="24h",
+        )
+        result = client.test_invoke_executor("1", body)
+        assert result["success"] is True
+        assert result["data"]["success"] is True
+        mock_post.assert_called_once_with("/executors/1/test-invoke", body, account_id_override=None)
+
+    @patch('scheduler0.client.Client._post')
+    def test_test_invoke_executor_no_body(self, mock_post, client):
+        """Test-invoking with a default synthetic job (no body)."""
+        mock_post.return_value = {"success": True, "data": {"test": True, "success": True}}
+        result = client.test_invoke_executor("1")
+        assert result["success"] is True
+        mock_post.assert_called_once_with("/executors/1/test-invoke", None, account_id_override=None)
 
