@@ -47,25 +47,26 @@ class AccountJobExecutionsCount:
 
 
 @dataclass
-class AccountClassifyRequestsCount:
-    """Remaining monthly AI classify-request quota for an account."""
-    id: int
-    account_id: int
-    request_count: int
-    date_created: str
-    date_modified: str
-    next_reset_date: str
+class AIUsageDimension:
+    """Log-derived view of one AI quota dimension (prompt or classify) for the period."""
+    limit: int
+    used: int
+    remaining: int
 
 
 @dataclass
-class AccountPromptRequestsCount:
-    """Remaining monthly AI prompt-request quota for an account."""
-    id: int
+class AIUsage:
+    """Authoritative, log-derived AI request usage for an account's current period.
+
+    Replaces the removed classify-count/prompt-count models.
+    """
     account_id: int
-    request_count: int
-    date_created: str
-    date_modified: str
+    period_start: str
     next_reset_date: str
+    prompt: AIUsageDimension
+    classify: AIUsageDimension
+    # Sum of estimated prompt-request USD cost for the current period (all statuses).
+    estimated_cost_usd: float
 
 
 @dataclass
