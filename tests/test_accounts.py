@@ -37,36 +37,22 @@ class TestAccounts:
         mock_put.assert_called_once_with("/accounts/1", body, account_id_override=None)
 
     @patch('scheduler0.client.Client._get')
-    def test_get_account_classify_count(self, mock_get, client):
-        """Test getting the account classify-request quota."""
-        mock_get.return_value = {"success": True, "data": {"requestCount": 950}}
-        result = client.get_account_classify_count("123")
+    def test_get_ai_usage(self, mock_get, client):
+        """Test getting the account's log-derived AI usage."""
+        mock_get.return_value = {
+            "success": True,
+            "data": {
+                "accountId": 123,
+                "periodStart": "2025-01-01T00:00:00Z",
+                "nextResetDate": "2025-02-01T00:00:00Z",
+                "prompt": {"limit": 1000, "used": 50, "remaining": 950},
+                "classify": {"limit": 1000, "used": 40, "remaining": 960},
+                "estimatedCostUsd": 1.23,
+            },
+        }
+        result = client.get_ai_usage("123")
         assert result["success"] is True
-        mock_get.assert_called_once_with("/accounts/123/classify-count", params=None, account_id_override="123")
-
-    @patch('scheduler0.client.Client._put')
-    def test_increase_account_classify_count(self, mock_put, client):
-        """Test increasing the account classify-request quota."""
-        mock_put.return_value = {"success": True, "data": {"newClassifyCount": 1000}}
-        result = client.increase_account_classify_count("123", 50)
-        assert result["success"] is True
-        mock_put.assert_called_once_with("/accounts/123/classify-count", {"count": 50}, account_id_override="123")
-
-    @patch('scheduler0.client.Client._get')
-    def test_get_account_prompt_count(self, mock_get, client):
-        """Test getting the account prompt-request quota."""
-        mock_get.return_value = {"success": True, "data": {"requestCount": 800}}
-        result = client.get_account_prompt_count("123")
-        assert result["success"] is True
-        mock_get.assert_called_once_with("/accounts/123/prompt-count", params=None, account_id_override="123")
-
-    @patch('scheduler0.client.Client._put')
-    def test_increase_account_prompt_count(self, mock_put, client):
-        """Test increasing the account prompt-request quota."""
-        mock_put.return_value = {"success": True, "data": {"newPromptCount": 900}}
-        result = client.increase_account_prompt_count("123", 100)
-        assert result["success"] is True
-        mock_put.assert_called_once_with("/accounts/123/prompt-count", {"count": 100}, account_id_override="123")
+        mock_get.assert_called_once_with("/accounts/123/ai/usage", params=None, account_id_override="123")
 
     @patch('scheduler0.client.Client._put')
     def test_add_feature_to_account(self, mock_put, client):

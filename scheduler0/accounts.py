@@ -53,26 +53,15 @@ def increase_account_execution_count(self: Client, account_id: str, count: int) 
     return self._put(f"/accounts/{account_id}/execution-count", body, account_id_override=account_id)
 
 
-def get_account_classify_count(self: Client, account_id: str) -> dict:
-    """Get the remaining monthly AI classify-request quota for an account."""
-    return self._get(f"/accounts/{account_id}/classify-count", params=None, account_id_override=account_id)
+def get_ai_usage(self: Client, account_id: str) -> dict:
+    """Get the account's log-derived AI request usage for the current period.
 
-
-def increase_account_classify_count(self: Client, account_id: str, count: int) -> dict:
-    """Increase the AI classify-request quota for an account."""
-    body = {"count": count}
-    return self._put(f"/accounts/{account_id}/classify-count", body, account_id_override=account_id)
-
-
-def get_account_prompt_count(self: Client, account_id: str) -> dict:
-    """Get the remaining monthly AI prompt-request quota for an account."""
-    return self._get(f"/accounts/{account_id}/prompt-count", params=None, account_id_override=account_id)
-
-
-def increase_account_prompt_count(self: Client, account_id: str, count: int) -> dict:
-    """Increase the AI prompt-request quota for an account."""
-    body = {"count": count}
-    return self._put(f"/accounts/{account_id}/prompt-count", body, account_id_override=account_id)
+    Returns prompt and classify limits (feature-derived), the number of successful
+    requests used, the remaining allowance, the summed estimated prompt cost in USD, and
+    the period boundary. This is the single source of truth for AI credit usage and
+    replaces the removed classify-count/prompt-count endpoints.
+    """
+    return self._get(f"/accounts/{account_id}/ai/usage", params=None, account_id_override=account_id)
 
 
 def get_account_tokens(self: Client, account_id: str) -> dict:
@@ -144,10 +133,7 @@ Client.add_all_features_to_account = add_all_features_to_account
 Client.remove_all_features_from_account = remove_all_features_from_account
 Client.get_account_execution_count = get_account_execution_count
 Client.increase_account_execution_count = increase_account_execution_count
-Client.get_account_classify_count = get_account_classify_count
-Client.increase_account_classify_count = increase_account_classify_count
-Client.get_account_prompt_count = get_account_prompt_count
-Client.increase_account_prompt_count = increase_account_prompt_count
+Client.get_ai_usage = get_ai_usage
 Client.get_account_tokens = get_account_tokens
 Client.add_account_tokens = add_account_tokens
 Client.get_account_ai_settings = get_account_ai_settings

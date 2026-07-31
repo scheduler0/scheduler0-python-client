@@ -191,13 +191,9 @@ client.update_account("account-id", AccountUpdateRequestBody(name="New Name"))
 count = client.get_account_execution_count("account-id")
 increased = client.increase_account_execution_count("account-id", 10000)
 
-# Get / increase the account's monthly AI classify-request quota
-classify = client.get_account_classify_count("account-id")
-classify_bumped = client.increase_account_classify_count("account-id", 1000)
-
-# Get / increase the account's monthly AI prompt-request quota
-prompt = client.get_account_prompt_count("account-id")
-prompt_bumped = client.increase_account_prompt_count("account-id", 1000)
+# Get the account's log-derived AI usage for the current period
+# (prompt + classify limits/used/remaining, and estimated cost in USD)
+usage = client.get_ai_usage("account-id")
 
 # Get / add platform tokens
 tokens = client.get_account_tokens("account-id")
