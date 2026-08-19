@@ -4,7 +4,13 @@ Tests for account management methods.
 
 import pytest
 from unittest.mock import patch, Mock
-from scheduler0.types import AccountCreateRequestBody, AccountUpdateRequestBody, FeatureRequest
+from scheduler0.types import (
+    AccountCreateRequestBody,
+    AccountUpdateRequestBody,
+    AccountAISettings,
+    ActiveModel,
+    FeatureRequest,
+)
 
 
 class TestAccounts:
@@ -25,7 +31,7 @@ class TestAccounts:
         mock_get.return_value = {"success": True, "data": {"id": 1, "name": "Test Account"}}
         result = client.get_account("1")
         assert result["success"] is True
-        mock_get.assert_called_once_with("/accounts/1", params=None, account_id_override=None)
+        mock_get.assert_called_once_with("/accounts/1", params=None, account_id_override="1")
 
     @patch('scheduler0.client.Client._put')
     def test_update_account(self, mock_put, client):
@@ -34,7 +40,7 @@ class TestAccounts:
         body = AccountUpdateRequestBody(name="Renamed")
         result = client.update_account("1", body)
         assert result["success"] is True
-        mock_put.assert_called_once_with("/accounts/1", body, account_id_override=None)
+        mock_put.assert_called_once_with("/accounts/1", body, account_id_override="1")
 
     @patch('scheduler0.client.Client._get')
     def test_get_ai_usage(self, mock_get, client):
@@ -87,4 +93,31 @@ class TestAccounts:
         mock_request.assert_called_once_with(
             "DELETE", "/accounts/1/features/all", None, params=None, account_id_override="1"
         )
+
+    @patch("scheduler0.client.requests.Session.request")
+    def test_upsert_account_ai_settings_sends_snake_case(self, mock_request, client):
+        """The AI settings API uses snake_case field names (models.AccountAISettings),
+        unlike every other endpoint's camelCase body. This must bypass the default
+        camelCase serializer or every multi-word field (active_models, openai_api_key,
+        ...) silently fails to persist server-side."""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"success": True, "data": {"message": "AI settings saved"}}
+        mock_request.return_value = mock_response
+
+        body = AccountAISettings(
+            active_models=[ActiveModel(provider="openai", model="gpt-4.1-mini")],
+            openai_api_key="sk-test",
+        )
+        result = client.upsert_account_ai_settings("1", body)
+
+        assert result["success"] is True
+        _, kwargs = mock_request.call_args
+        assert kwargs["method"] == "PUT"
+        assert kwargs["url"].endswith("/ai/settings")
+        assert kwargs["json"] == {
+            "active_models": [{"provider": "openai", "model": "gpt-4.1-mini"}],
+            "openai_api_key": "sk-test",
+        }
+        assert kwargs["headers"]["X-Account-ID"] == "1"
 
