@@ -2,9 +2,29 @@
 Account management methods for Scheduler0 client.
 """
 
-from typing import Optional
+from dataclasses import asdict, is_dataclass
+from typing import Any, Dict, Optional
+
+import requests
+
 from .client import Client
 from .types import AccountCreateRequestBody, AccountUpdateRequestBody, AccountAISettings, ActiveModel, FeatureRequest
+
+
+def _ai_settings_payload(body: Any) -> Dict[str, Any]:
+    """Build the snake_case JSON payload for /ai/settings.
+
+    The AI settings API uses snake_case field names (see models.AccountAISettings),
+    so this bypasses the client's default camelCase body serializer -- same pattern
+    as suggestions._to_payload for /ai/suggestions/*.
+    """
+    if is_dataclass(body):
+        raw = asdict(body)
+    elif isinstance(body, dict):
+        raw = body
+    else:
+        raise TypeError("body must be an AccountAISettings dataclass or a dict")
+    return {k: v for k, v in raw.items() if v is not None and k != "account_id"}
 
 
 def create_account(self: Client, body: AccountCreateRequestBody) -> dict:
@@ -14,12 +34,12 @@ def create_account(self: Client, body: AccountCreateRequestBody) -> dict:
 
 def get_account(self: Client, account_id: str) -> dict:
     """Get account details by ID."""
-    return self._get(f"/accounts/{account_id}", params=None, account_id_override=None)
+    return self._get(f"/accounts/{account_id}", params=None, account_id_override=account_id)
 
 
 def update_account(self: Client, account_id: str, body: AccountUpdateRequestBody) -> dict:
     """Update an account (e.g. rename)."""
-    return self._put(f"/accounts/{account_id}", body, account_id_override=None)
+    return self._put(f"/accounts/{account_id}", body, account_id_override=account_id)
 
 
 def add_feature_to_account(self: Client, account_id: str, body: FeatureRequest) -> dict:
@@ -104,7 +124,32 @@ def upsert_account_ai_settings(self: Client, account_id: str, body: AccountAISet
             ),
         )
     """
-    return self._put("/ai/settings", body, account_id_override=account_id)
+    payload = _ai_settings_payload(body)
+    resolved_account_id = self._resolve_account_id(None, account_id)
+    headers = self._prepare_headers(resolved_account_id)
+    url = self._build_url("/ai/settings")
+
+    response = self.session.request(
+        method="PUT",
+        url=url,
+        headers=headers,
+        json=payload,
+        auth=(self.username, self.password) if self.username and self.password else None,
+    )
+
+    if response.status_code >= 400:
+        error_msg = f"API error: {response.status_code}"
+        try:
+            error_body = response.json()
+            if isinstance(error_body, dict) and "message" in error_body:
+                error_msg = error_body["message"]
+            else:
+                error_msg = response.text
+        except (ValueError, KeyError):
+            error_msg = response.text
+        raise requests.HTTPError(f"{error_msg} - {response.text}", response=response)
+
+    return response.json()
 
 
 def get_ai_models(self: Client) -> dict:
