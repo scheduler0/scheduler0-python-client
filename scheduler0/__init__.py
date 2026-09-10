@@ -20,6 +20,7 @@ from . import prompt
 from . import suggestions
 from . import schedule
 from . import backup
+from . import cluster
 from . import local_executors
 
 # Import types
