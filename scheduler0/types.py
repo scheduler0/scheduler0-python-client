@@ -47,25 +47,26 @@ class AccountJobExecutionsCount:
 
 
 @dataclass
-class AccountClassifyRequestsCount:
-    """Remaining monthly AI classify-request quota for an account."""
-    id: int
-    account_id: int
-    request_count: int
-    date_created: str
-    date_modified: str
-    next_reset_date: str
+class AIUsageDimension:
+    """Log-derived view of one AI quota dimension (prompt or classify) for the period."""
+    limit: int
+    used: int
+    remaining: int
 
 
 @dataclass
-class AccountPromptRequestsCount:
-    """Remaining monthly AI prompt-request quota for an account."""
-    id: int
+class AIUsage:
+    """Authoritative, log-derived AI request usage for an account's current period.
+
+    Replaces the removed classify-count/prompt-count models.
+    """
     account_id: int
-    request_count: int
-    date_created: str
-    date_modified: str
+    period_start: str
     next_reset_date: str
+    prompt: AIUsageDimension
+    classify: AIUsageDimension
+    # Sum of estimated prompt-request USD cost for the current period (all statuses).
+    estimated_cost_usd: float
 
 
 @dataclass
@@ -114,7 +115,6 @@ class Credential:
     api_key: str
     date_created: str
     date_modified: Optional[str] = None
-    date_deleted: Optional[str] = None
     created_by: Optional[str] = None
     modified_by: Optional[str] = None
     deleted_by: Optional[str] = None
@@ -291,9 +291,15 @@ class Executor:
     webhook_url: Optional[str] = None
     webhook_secret: Optional[str] = None
     webhook_method: Optional[str] = None
+    # command and working_dir apply to local executors (type="local"): the CLI polls
+    # its assigned jobs and runs command locally in working_dir for each trigger.
+    command: Optional[str] = None
+    working_dir: Optional[str] = None
+    # When true, jobs sharing this executor and the same fire time are delivered in
+    # one aggregated call instead of one call per job.
+    payload_aggregation: Optional[bool] = None
     date_created: Optional[str] = None
     date_modified: Optional[str] = None
-    date_deleted: Optional[str] = None
     created_by: Optional[str] = None
     modified_by: Optional[str] = None
     deleted_by: Optional[str] = None
@@ -314,6 +320,9 @@ class ExecutorRequestBody:
     webhook_url: Optional[str] = None
     webhook_secret: Optional[str] = None
     webhook_method: Optional[str] = None
+    command: Optional[str] = None
+    working_dir: Optional[str] = None
+    payload_aggregation: Optional[bool] = None
     account_id: Optional[int] = None  # Excluded from JSON
 
 
@@ -332,6 +341,9 @@ class ExecutorUpdateRequestBody:
     webhook_url: Optional[str] = None
     webhook_secret: Optional[str] = None
     webhook_method: Optional[str] = None
+    command: Optional[str] = None
+    working_dir: Optional[str] = None
+    payload_aggregation: Optional[bool] = None
     account_id: Optional[int] = None  # Excluded from JSON
 
 
@@ -425,6 +437,8 @@ class AsyncTask:
     service: str
     state: int
     date_created: str
+    account_id: int
+    date_modified: str
 
 
 # Healthcheck Types

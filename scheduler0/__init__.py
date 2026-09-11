@@ -20,6 +20,7 @@ from . import prompt
 from . import suggestions
 from . import schedule
 from . import backup
+from . import cluster
 from . import local_executors
 
 # Import types
@@ -29,8 +30,8 @@ from .types import (
     AccountUpdateRequestBody,
     AccountFeature,
     AccountJobExecutionsCount,
-    AccountClassifyRequestsCount,
-    AccountPromptRequestsCount,
+    AIUsageDimension,
+    AIUsage,
     AccountAISettings,
     ActiveModel,
     ModelInfo,
@@ -103,8 +104,8 @@ __all__ = [
     "AccountUpdateRequestBody",
     "AccountFeature",
     "AccountJobExecutionsCount",
-    "AccountClassifyRequestsCount",
-    "AccountPromptRequestsCount",
+    "AIUsageDimension",
+    "AIUsage",
     "AccountAISettings",
     "PromptRequest",
     "PromptRequestsResult",
