@@ -79,8 +79,13 @@ class TestAccounts:
     @patch('scheduler0.client.Client._request')
     def test_add_all_features_to_account(self, mock_request, client):
         """Test adding all features to an account."""
-        mock_request.return_value.status_code = 204
-        client.add_all_features_to_account("1")
+        mock_request.return_value.status_code = 200
+        mock_request.return_value.json.return_value = {
+            "success": True,
+            "data": {"message": "All features added successfully"},
+        }
+        result = client.add_all_features_to_account("1")
+        assert result["data"]["message"] == "All features added successfully"
         mock_request.assert_called_once_with(
             "PUT", "/accounts/1/features/all", None, params=None, account_id_override="1"
         )
@@ -88,8 +93,13 @@ class TestAccounts:
     @patch('scheduler0.client.Client._request')
     def test_remove_all_features_from_account(self, mock_request, client):
         """Test removing all features from an account."""
-        mock_request.return_value.status_code = 204
-        client.remove_all_features_from_account("1")
+        mock_request.return_value.status_code = 200
+        mock_request.return_value.json.return_value = {
+            "success": True,
+            "data": {"message": "All features removed successfully"},
+        }
+        result = client.remove_all_features_from_account("1")
+        assert result["data"]["message"] == "All features removed successfully"
         mock_request.assert_called_once_with(
             "DELETE", "/accounts/1/features/all", None, params=None, account_id_override="1"
         )

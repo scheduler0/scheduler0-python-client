@@ -4,84 +4,10 @@
 
 # Scheduler0 Python Client
 
-A Python client library for interacting with the [Scheduler0 API](https://scheduler0.com). This client provides a convenient way to manage accounts, credentials, executions, executors, projects, jobs, features, create jobs from AI prompts, and monitor the health of your Scheduler0 cluster.
+Python client for the [Scheduler0](https://scheduler0.com) HTTP API (`/api/v1`). It is a thin, synchronous wrapper over [`requests`](https://requests.readthedocs.io/): every method builds the request, sets the auth headers, and returns the decoded JSON envelope (`{"success": bool, "data": ...}`) as a `dict`, except the AI methods noted below which return typed dataclasses.
 
-## Features
-
-- **Account Management** *(Self-hosted only)*
-  - Create accounts
-  - Get account details
-  - Add/remove features from accounts
-  - Get/increase the monthly execution count
-  - Get/add platform tokens
-  - Configure per-account AI provider settings (BYOK)
-  - *Note: These APIs are for users running Scheduler0 in their own infrastructure who need granular control over team access and resource usage.*
-
-- **Feature Management** *(Self-hosted only)*
-  - List available features
-  - Add/remove all features for an account
-  - *Note: These APIs are for users running Scheduler0 in their own infrastructure who need granular control over team access and resource usage.*
-
-- **Credentials Management**
-  - List credentials with pagination and ordering
-  - Create new credentials
-  - Get credential details
-  - Update credentials
-  - Delete credentials
-  - Archive credentials
-  - Rotate the server secret key
-
-- **Executions Management**
-  - List job executions with date filtering
-  - Filter by project ID and job ID
-  - View execution details and logs
-  - Date-range analytics and lifetime totals
-  - Clean up old execution logs
-
-- **Executors Management**
-  - List executors with pagination and ordering
-  - Create new executors (webhook, cloud function)
-  - Get executor details
-  - Update executors
-  - Delete executors
-
-- **Local Executors Management**
-  - Register local executors
-  - Pull assigned jobs for a local executor
-  - Report local execution results in batches
-
-- **Backup & Restore** *(Self-hosted only)*
-  - Start an online database backup
-  - Restore from a backup file
-
-- **Projects Management**
-  - List projects with pagination
-  - Create new projects
-  - Get project details
-  - Update projects
-  - Delete projects
-
-- **Jobs Management**
-  - List jobs with pagination and ordering
-  - Create new jobs with comprehensive scheduling options
-  - Batch create multiple jobs in a single request
-  - Get job details
-  - Update jobs
-  - Delete jobs
-
-- **AI-Powered Job Creation**
-  - Create job configurations from natural language prompts
-  - AI generates cron expressions, scheduling, and job metadata
-  - Supports purposes, events, recipients, and channels
-
-- **Async Tasks Management** *(Self-hosted only)*
-  - Get async task status by request ID
-  - *Note: These APIs are for users running Scheduler0 in their own infrastructure who need granular control over team access and resource usage.*
-
-- **Health Monitoring**
-  - Check cluster health
-  - View raft statistics
-  - Monitor leader status
+- Full API reference: [api-reference.scheduler0.com](https://api-reference.scheduler0.com)
+- Docs: [docs.scheduler0.com](https://docs.scheduler0.com)
 
 ## Installation
 
@@ -89,276 +15,183 @@ A Python client library for interacting with the [Scheduler0 API](https://schedu
 pip install scheduler0
 ```
 
-Or install from source:
+Requires Python 3.8+ and `requests>=2.28`.
 
-```bash
-git clone https://github.com/scheduler0/scheduler0-python-client.git
-cd scheduler0-python-client
-pip install .
-```
+## Authentication and configuration
 
-## API Documentation
+Every request except `healthcheck()` needs three headers, which the client sets from its constructor arguments:
 
-- **OpenAPI Specification**: [openapi.json](https://api-reference.scheduler0.com) - Complete API specification
-
-## Authentication
-
-The Scheduler0 Python client supports multiple authentication methods:
-
-> **For Self-hosted Users**: If you're running Scheduler0 on your own infrastructure, you can authenticate using a username and password that is set during infrastructure setup (see Basic Authentication below).
-
-### 1. API Key + Secret Authentication (Default)
-Most endpoints require API Key and Secret authentication with an Account ID:
+| Header | Source |
+|--------|--------|
+| `X-API-Key` | `api_key` |
+| `X-Secret-Key` | `api_secret` |
+| `X-Account-ID` | `account_id` (or a per-call `account_id_override`) |
 
 ```python
-from scheduler0 import NewAPIClientWithAccount
+from scheduler0 import Client
 
-client = NewAPIClientWithAccount(
-    base_url="http://localhost:7070",  # Base URL
-    version="v1",                       # API Version
-    api_key="your-api-key",             # API Key
-    api_secret="your-api-secret",       # API Secret
-    account_id="123",                   # Account ID
-)
-```
-
-### 2. Basic Authentication (Self-hosted Infrastructure)
-For users running Scheduler0 on their own infrastructure, authenticate with a username and password that is set during infrastructure setup:
-
-```python
-from scheduler0 import NewBasicAuthClient
-
-client = NewBasicAuthClient(
-    base_url="http://localhost:7070",  # Base URL
-    version="v1",                      # API Version
-    username="username",               # Username set during infrastructure setup
-    password="password",               # Password set during infrastructure setup
-)
-```
-
-> **Note**: This authentication method is for self-hosted deployments. The username and password are configured when you set up your Scheduler0 infrastructure.
-
-### 3. Flexible Options Pattern
-For more flexibility, use the options pattern:
-
-```python
-from scheduler0 import NewClient
-
-client = NewClient(
-    base_url="http://localhost:7070",
-    version="v1",
-    api_key="api-key",
-    api_secret="api-secret",
+client = Client(
+    base_url="https://api.scheduler0.com",  # required; must include http:// or https://
+    version="v1",                           # optional, default "v1"
+    api_key="your-api-key",
+    api_secret="your-api-secret",
     account_id="123",
 )
 ```
 
+`NewClient(...)`, `NewAPIClient(base_url, version, api_key, api_secret)`, `NewAPIClientWithAccount(base_url, version, api_key, api_secret, account_id)` and `NewBasicAuthClient(base_url, version, username, password)` are equivalent factory functions.
+
+Notes on behaviour, as implemented in `scheduler0/client.py`:
+
+- There is no default `base_url`; the hosted API is `https://api.scheduler0.com`. For a self-hosted cluster use your own URL.
+- Requests are made with a `requests.Session` and **no timeout**. Set one yourself if you need it (e.g. wrap calls or mount an adapter on `client.session`).
+- There are no automatic retries, rate-limit handling or pagination helpers.
+- The account ID resolves in this order: `account_id_override` argument, the body's `account_id` field (never serialised into JSON), then the client's `account_id`.
+
+### Self-hosting: Basic auth
+
+Operators of a self-hosted cluster can use the Basic-auth username/password configured on the server. The client then sends `Authorization: Basic ...` plus `X-Peer: cmd`; this satisfies the `admin`-only endpoints (accounts, cluster, `rotate_secret`).
+
+```python
+from scheduler0 import NewBasicAuthClient
+
+client = NewBasicAuthClient("https://your-scheduler0-instance.com", "v1", "username", "password")
+```
+
+### Credential scopes
+
+Each credential carries `scopes`, a non-empty subset of `read`, `write`, `execute`, `admin` (`admin` satisfies everything). A missing scope yields `403 credential missing required scope: <scope>`; an expired credential yields `401`.
+
+| Scope | Grants |
+|-------|--------|
+| `read` | All `GET`s: jobs, projects, credentials, executors, executions/*, async-tasks/{id}, features, ai/settings, ai/models, ai/prompt-requests, local-executors/{id}/jobs |
+| `write` | `POST`/`PUT`/`DELETE` on jobs, projects, credentials, executors, ai/settings; `POST /local-executors` |
+| `execute` | ai/prompt, ai/prompt/classify, ai/schedule, ai/suggestions/*, executions/cleanup-old-logs, executors/{id}/test-invoke, local-executors/{id}/executions |
+| `admin` | accounts/*, cluster/*, account/rotate-secret |
+
+## Error handling
+
+Any response with status `>= 400` raises `requests.HTTPError`; the message contains the response body and `e.response` is the original `requests.Response`. The server's error envelope is `{"success": false, "data": "<message>"}` (a few AI endpoints return `{"code", "message", "field"}` in `data`). Network failures raise the usual `requests` exceptions (`ConnectionError`, `Timeout`, ...).
+
+```python
+import requests
+
+try:
+    result = client.create_project(body)
+except requests.HTTPError as e:
+    status = e.response.status_code          # 400, 401, 403, 404, 409, 422, 429, ...
+    detail = e.response.json().get("data")   # server error message
+    print(status, detail)
+```
+
+A `2xx` response is never raised, so for methods that return the envelope check `result["success"]` (see the credentials note below for a case where this matters).
+
 ## Usage
 
-> **Note for Self-hosted Users**: Account Management, Feature Management, and Async Tasks Management APIs are designed for users running Scheduler0 in their own infrastructure who need granular control over team access and resource usage. If you're using Scheduler0's hosted service, these endpoints may not be available or may work differently.
+All examples assume `client` was created as above.
 
-### Managing Accounts
-
-> **Note**: Account Management is designed for self-hosted deployments where you need granular control over team access and resource usage.
+### Projects
 
 ```python
-from scheduler0 import NewAPIClientWithAccount
-from scheduler0.types import AccountCreateRequestBody, FeatureRequest
+from scheduler0.types import ProjectRequestBody, ProjectUpdateRequestBody, ProjectDeleteRequestBody
 
-client = NewAPIClientWithAccount(
-    "http://localhost:7070", "v1", "api-key", "api-secret", "123"
-)
+# GET /projects  -> data: {total, offset, limit, projects: [...]}
+page = client.list_projects(limit=10, offset=0, order_by="date_created", order_by_direction="desc")
+for project in page["data"]["projects"]:
+    print(project["id"], project["name"])
 
-# Create a new account
-account_body = AccountCreateRequestBody(name="My Account")
-result = client.create_account(account_body)
-
-# Get account details
-account = client.get_account("account-id")
-
-# Add feature to account
-feature = FeatureRequest(feature_id=1)
-result = client.add_feature_to_account("account-id", feature)
-
-# Remove feature from account
-client.remove_feature_from_account("account-id", feature)
-
-# Rename an account
-from scheduler0 import AccountUpdateRequestBody
-client.update_account("account-id", AccountUpdateRequestBody(name="New Name"))
-
-# Get / increase the account's monthly execution count
-count = client.get_account_execution_count("account-id")
-increased = client.increase_account_execution_count("account-id", 10000)
-
-# Get the account's log-derived AI usage for the current period
-# (prompt + classify limits/used/remaining, and estimated cost in USD)
-usage = client.get_ai_usage("account-id")
-
-# Get / add platform tokens
-tokens = client.get_account_tokens("account-id")
-added = client.add_account_tokens("account-id", 1000)
-```
-
-### AI Provider Settings (Bring Your Own Key)
-
-Configure an ordered list of active models (primary + fallbacks) per account. When `create_job_from_prompt` is called, the primary model is tried first; if it fails the next fallback is tried. Supported providers: `openai`, `anthropic`, `bedrock`, `openrouter`. Credential fields are encrypted at rest and never returned in plaintext.
-
-Use `get_ai_models()` to fetch the per-provider approved model catalog before configuring settings.
-
-```python
-from scheduler0 import Client, AccountAISettings, ActiveModel
-
-client = Client(...)
-
-# Fetch the approved model catalog
-catalog = client.get_ai_models()
-# catalog["data"] = {"openai": [{"id": "gpt-4.1-mini", "display_name": "...", "default": True}, ...], ...}
-
-# Read current settings (keys are redacted)
-settings = client.get_account_ai_settings("account-id")
-
-# Save settings with primary + fallback
-saved = client.upsert_account_ai_settings("account-id", AccountAISettings(
-    active_models=[
-        ActiveModel(provider="openai", model="gpt-4.1-mini"),        # primary
-        ActiveModel(provider="anthropic", model="claude-sonnet-4-5"), # fallback
-    ],
-    openai_api_key="sk-...",
-    anthropic_api_key="sk-ant-...",
-))
-```
-
-### AI Prompt Request Log
-
-Retrieve the account's AI prompt-request history with optional filters and pagination.
-
-```python
-log = client.list_prompt_requests(
-    provider="openai",
-    status="success",
-    search="reminder",
-    limit=25,
-    offset=0,
-)
-# log.total, log.limit, log.offset, log.requests: List[PromptRequest]
-for req in log.requests:
-    print(req.model, req.total_tokens, req.estimated_cost_usd, req.status)
-```
-
-### Managing Features
-
-> **Note**: Feature Management is designed for self-hosted deployments where you need granular control over team access and resource usage.
-
-```python
-# List all available features
-features = client.list_features()
-
-# Add or remove every feature for an account
-client.add_all_features_to_account("account-id")
-client.remove_all_features_from_account("account-id")
-```
-
-### Managing Credentials
-
-```python
-from scheduler0.types import (
-    CredentialCreateRequestBody,
-    CredentialUpdateRequestBody,
-    CredentialDeleteRequestBody,
-    CredentialArchiveRequestBody,
-)
-
-# List credentials with pagination and ordering
-credentials = client.list_credentials(
-    limit=10,
-    offset=0,
-    order_by="date_created",
-    order_by_direction="desc",
-)
-
-# Create a new credential. `scopes` is required (a non-empty subset of
-# read/write/execute/admin). Optionally pass `expires_in_seconds` for a shorter TTL
-# (the server clamps it). Granting "admin" requires an operator or an existing
-# admin credential.
-credential_body = CredentialCreateRequestBody(
+# POST /projects (201). name must be unique per account.
+created = client.create_project(ProjectRequestBody(
+    name="My Project",
+    description="Project description",
     created_by="user@example.com",
-    scopes=["read", "write", "execute"],
-    expires_in_seconds=8 * 60 * 60,  # optional (8 hours)
-)
-credential = client.create_credential(credential_body)
+))
+project_id = created["data"]["id"]
 
-# Get a specific credential
-credential = client.get_credential("credential-id")
+# GET /projects/{id}
+project = client.get_project(str(project_id))
 
-# Update a credential
-update_body = CredentialUpdateRequestBody(
+# PUT /projects/{id} - only description can change
+client.update_project(str(project_id), ProjectUpdateRequestBody(
+    description="Updated description",
     modified_by="user@example.com",
-    archived=False,
-)
-credential = client.update_credential("credential-id", update_body)
+))
 
-# Delete a credential
-delete_body = CredentialDeleteRequestBody(deleted_by="user@example.com")
-client.delete_credential("credential-id", delete_body)
-
-# Archive a credential
-archive_body = CredentialArchiveRequestBody(archived_by="user@example.com")
-client.archive_credential("credential-id", archive_body)
-
-# Re-encrypt stored secrets (credential secrets + executor cloud keys + AI provider
-# keys) with a new server secret key (self-hosting). Update the server's SecretKey and
-# reload it first, then call this with the previous key.
-rotated = client.rotate_secret("<old-hex-secret-key>")
-# rotated["data"]["credentialsRotated"], rotated["data"]["executorsRotated"], rotated["data"]["aiSettingsRotated"]
+# DELETE /projects/{id} (204) - also deletes the project's jobs
+client.delete_project(str(project_id), ProjectDeleteRequestBody(deleted_by="user@example.com"))
 ```
 
-### Managing Executions
+`order_by` accepts `id`, `name`, `description`, `date_created`, `account_id`; `order_by_direction` is `asc` or `desc`. `limit` above 100 is rejected with `429`.
+
+### Jobs
+
+`POST /jobs` always takes an **array** of jobs and is asynchronous: it returns `202` with `data` set to a request ID string. Poll `get_async_task(request_id)` to learn whether the jobs were created. `create_job(body)` is a convenience wrapper that sends a one-element array.
 
 ```python
-# List executions with date filtering
-executions = client.list_executions(
-    start_date="2024-01-01T00:00:00Z",  # Required: Start date (RFC3339 format)
-    end_date="2024-12-31T23:59:59Z",    # Required: End date (RFC3339 format)
-    project_id=0,                       # Optional: Project ID (0 for all)
-    job_id=0,                           # Optional: Job ID (0 for all)
-    limit=10,                           # Required: Maximum number of items
-    offset=0,                           # Required: Number of items to skip
+from scheduler0.types import JobRequestBody, JobUpdateRequestBody, JobDeleteRequestBody
+
+job = JobRequestBody(
+    project_id=project_id,             # required
+    timezone="UTC",                    # required (IANA name)
+    created_by="user@example.com",     # required by the server (400 if missing)
+    executor_id=456,                   # optional
+    spec="0 30 * * * *",               # optional six-field cron (sec min hour dom month dow); empty = one-time job at start_date
+    data='{"action": "process_data"}', # optional payload string
+    start_date="2026-01-01T00:00:00Z", # optional RFC3339
+    end_date="2026-12-31T23:59:59Z",   # optional RFC3339
+    timezone_offset=0,                 # optional
+    retry_max=3,                       # optional
+    status="active",                   # optional: "active" | "inactive"
 )
 
-# Execution counts grouped into per-minute buckets for a time window
-analytics = client.get_date_range_analytics(
-    start_date="2024-01-01",  # YYYY-MM-DD
-    start_time="00:00:00",    # HH:MM:SS or HH:MM
-)
+accepted = client.create_job(job)                 # 202
+request_id = accepted["data"]                     # e.g. "b1c2..."
 
-# Lifetime totals (scheduled / success / failed) for the account
-totals = client.get_execution_totals(123)
+# Batch: several jobs in one request
+accepted = client.batch_create_jobs([job, job])
+request_id = accepted["data"]
 
-# Delete execution logs older than a retention window (self-hosting; peer auth)
-cleanup = client.cleanup_old_execution_logs("123", 6)  # retention_months
+# GET /async-tasks/{id} - blocks until the task finishes if it is still running
+task = client.get_async_task(request_id)
+state = task["data"]["state"]   # 0 not started, 1 in progress, 2 success, 3 failed
+output = task["data"]["output"] # JSON-encoded created jobs on success, error text on failure
+
+# GET /jobs -> data: {total, offset, limit, jobs: [...]}
+page = client.list_jobs(project_id=str(project_id), limit=10, offset=0,
+                        order_by="date_created", order_by_direction="desc")
+
+# GET /jobs/{id}
+job_detail = client.get_job("42")
+
+# PUT /jobs/{id} - modified_by is required; timezone/timezone_offset/executor_id keep their
+# existing values when omitted
+client.update_job("42", JobUpdateRequestBody(
+    modified_by="user@example.com",
+    spec="0 0 * * * *",
+    status="inactive",
+))
+
+# DELETE /jobs/{id} (204)
+client.delete_job("42", JobDeleteRequestBody(deleted_by="user@example.com"))
 ```
 
-### Managing Executors
+Job JSON fields: `id, projectId, spec, data, executorId, startDate, endDate, lastExecutionDate, timezone, timezoneOffset, retryMax, executionId, dateCreated, accountId, dateModified, createdBy, modifiedBy, deletedBy, status` (zero-valued fields are omitted).
+
+### Executors
+
+Executor `type` is one of `webhook_url`, `cloud_function`, `local`. `webhook_url` requires `webhook_url` and `webhook_method` (`GET`/`POST`/`PUT`/`DELETE`); `local` requires `command`. `cloud_api_key`, `cloud_api_secret` and `webhook_secret` are returned **only** in the create response and are `None`/absent on every read.
 
 ```python
 from scheduler0.types import (
-    ExecutorRequestBody,
-    ExecutorUpdateRequestBody,
-    ExecutorDeleteRequestBody,
+    ExecutorRequestBody, ExecutorUpdateRequestBody, ExecutorDeleteRequestBody,
+    TestInvocationRequestBody, Job,
 )
 
-# List executors with pagination and ordering
-executors = client.list_executors(
-    limit=10,
-    offset=0,
-    order_by="date_created",
-    order_by_direction="desc",
-)
+# GET /executors -> data: {total, offset, limit, executors: [...]} (keys omitted when empty)
+page = client.list_executors(limit=10, offset=0, order_by="date_created", order_by_direction="desc")
 
-# Create a webhook executor. `description` and `tags` are optional and are used by the
-# /ai/schedule endpoint to match an executor to a prompt's purpose and channels.
-executor = ExecutorRequestBody(
+# POST /executors (201). description/tags are used by schedule_from_prompt to match executors.
+created = client.create_executor(ExecutorRequestBody(
     name="webhook-executor",
     type="webhook_url",
     webhook_url="https://example.com/webhook",
@@ -366,271 +199,217 @@ executor = ExecutorRequestBody(
     webhook_secret="secret-key",
     description="Sends transactional email to customers",
     tags=["email", "notifications"],
+    payload_aggregation=False,   # True = one call for all jobs firing at the same time
     created_by="user@example.com",
-)
-result = client.create_executor(executor)
+))
+executor_id = created["data"]["id"]
 
-# Create a cloud function executor
-executor = ExecutorRequestBody(
+client.create_executor(ExecutorRequestBody(
     name="cloud-function-executor",
     type="cloud_function",
-    region="us-west-1",
     cloud_provider="aws",
+    region="us-west-1",
     cloud_resource_url="https://example.com/function",
     cloud_api_key="api-key",
     cloud_api_secret="api-secret",
     created_by="user@example.com",
-)
-result = client.create_executor(executor)
+))
 
-# Get a specific executor
-executor = client.get_executor("executor-id")
+# GET /executors/{id}
+executor = client.get_executor(str(executor_id))
 
-# Update an executor
-update = ExecutorUpdateRequestBody(
+# PUT /executors/{id} - modified_by required
+client.update_executor(str(executor_id), ExecutorUpdateRequestBody(
     name="updated-executor",
     type="webhook_url",
+    webhook_url="https://example.com/webhook-v2",
+    webhook_method="POST",
     modified_by="user@example.com",
-    # ... other fields
-)
-result = client.update_executor("executor-id", update)
+))
 
-# Delete an executor
-delete_body = ExecutorDeleteRequestBody(deleted_by="user@example.com")
-client.delete_executor("executor-id", delete_body)
+# POST /executors/{id}/test-invoke - fires a synthetic job now, no side effects.
+# Body is optional. Local executors cannot be test-invoked (400).
+result = client.test_invoke_executor(str(executor_id), TestInvocationRequestBody(
+    job=Job(spec="0 0 2 * * *", data='{"action": "process_data"}', timezone="UTC", retry_max=2),
+    age="24h",                              # Go duration: how old the synthetic job looks
+    execution_time="2026-01-15T02:00:00Z",  # optional RFC3339, defaults to now
+))
+# data: {test, executorId, executorType, success, error, startedAt, finishedAt, durationMs, payload}
+print(result["data"]["success"], result["data"]["durationMs"])
 
-# Test-invoke an executor with a synthetic job — fires immediately (no waiting
-# for the cron spec/start date) and has no side effects (nothing is persisted
-# or rescheduled). The body is optional; pass None to use a default synthetic job.
-test_body = TestInvocationRequestBody(
-    job=Job(spec="0 2 * * *", data='{"action": "process_data"}', timezone="UTC", retry_max=2),
-    age="24h",                       # how old the synthetic entry should appear
-    execution_time="2024-01-15T02:00:00Z",  # optional; defaults to now
-)
-result = client.test_invoke_executor("executor-id", test_body)
-# HTTP 200 even when the target fails; check result["data"]["success"].
-print("invocation succeeded:", result["data"]["success"])
+# DELETE /executors/{id} (204)
+client.delete_executor(str(executor_id), ExecutorDeleteRequestBody(deleted_by="user@example.com"))
 ```
 
-### Managing Local Executors
+`order_by` for executors and credentials accepts `id`, `date_created`, `date_modified`, `created_by`, `modified_by`, `deleted_by` (credentials also `expires_at`).
 
-Local executors run jobs as shell commands on a machine you control. Register one, then the `scheduler0-cli` process pulls assigned jobs and reports results back.
+### Local executors
+
+Local executors run a command on a machine you control. The `scheduler0` CLI normally drives the pull/report endpoints; the client exposes them for custom runners.
 
 ```python
 from scheduler0.types import LocalExecutorRegisterRequest, LocalExecutionReport
 
-# Register a local executor (the server sets the type to "local")
+# POST /local-executors (201) -> data: {"id": <executor id>}
 reg = client.register_local_executor(LocalExecutorRegisterRequest(
     name="My Local Executor",
     command="/usr/local/bin/process-job.sh",
-    working_dir="/home/deploy/app",
-    created_by="user@example.com",
+    working_dir="/home/deploy/app",      # optional
+    created_by="user@example.com",       # required by the server
 ))
-executor_id = reg["data"]["id"]
+local_id = reg["data"]["id"]
 
-# Pull the active jobs assigned to a local executor (also renews its lease)
-jobs = client.pull_local_executor_jobs(executor_id)
+# GET /local-executors/{id}/jobs -> data: [Job, ...] (active jobs assigned to this executor)
+jobs = client.pull_local_executor_jobs(local_id)["data"]
 
-# Report a batch of execution results (state: 0=scheduled, 1=success, 2=failed)
-result = client.report_local_executions(executor_id, [
+# POST /local-executors/{id}/executions -> data: {"committed": n}
+# state: 0 scheduled, 1 success, 2 failed
+report = client.report_local_executions(local_id, [
     LocalExecutionReport(
-        job_id=1,
+        job_id=jobs[0]["id"],
         unique_id="exec-1",
         state=1,
-        last_execution_time="2025-01-01T00:00:00Z",
-        next_execution_time="2025-01-02T00:00:00Z",
+        last_execution_time="2026-01-01T00:00:00Z",
+        next_execution_time="2026-01-02T00:00:00Z",
     ),
 ])
-print(f"{result['data']['committed']} executions committed")
+print(report["data"]["committed"])
 ```
 
-### Managing Projects
+### Executions
+
+```python
+# GET /executions -> data: {total, offset, limit, executions: [...]}
+# All filters are optional. Server default limit is 50 (the client sends 10 unless told otherwise).
+page = client.list_executions(
+    limit=50,
+    offset=0,
+    start_date="2026-01-01T00:00:00Z",    # RFC3339
+    end_date="2026-12-31T23:59:59Z",
+    project_id=project_id,
+    job_id=42,
+    state="failed",                       # "scheduled" | "success" | "failed"
+    order_by="dateCreated",               # "dateCreated" | "lastExecutionDateTime" | "nextExecutionDateTime"
+    order_direction="DESC",               # "ASC" | "DESC"
+)
+for execution in page["data"]["executions"]:
+    # state: 0 scheduled, 1 success, 2 failed
+    print(execution["jobId"], execution["state"], execution["lastExecutionDatetime"])
+
+# GET /executions/analytics?startDate=YYYY-MM-DD&startTime=HH:MM[:SS]
+# -> data: {accountId, timezone, startDate, startTime, endDate, endTime, points: [{date, time, scheduled, success, failed}]}
+analytics = client.get_date_range_analytics(start_date="2026-01-01", start_time="00:00")
+
+# GET /executions/totals -> data: {accountId, scheduled, success, failed}
+totals = client.get_execution_totals(account_id=123)
+
+# POST /executions/cleanup-old-logs (execute scope) -> data: {message}
+# account_id must equal the X-Account-ID header; retention_months must be > 0.
+client.cleanup_old_execution_logs(account_id="123", retention_months=6)
+```
+
+### Credentials
 
 ```python
 from scheduler0.types import (
-    ProjectRequestBody,
-    ProjectUpdateRequestBody,
-    ProjectDeleteRequestBody,
+    CredentialCreateRequestBody, CredentialDeleteRequestBody, CredentialArchiveRequestBody,
 )
 
-# List projects with pagination and ordering
-projects = client.list_projects(
-    limit=10,
-    offset=0,
-    order_by="date_created",
-    order_by_direction="desc",
-)
+# GET /credentials -> data: {total, offset, limit, credentials: [...]}
+page = client.list_credentials(limit=10, offset=0, order_by="date_created", order_by_direction="desc")
 
-# Create a new project
-project = ProjectRequestBody(
-    name="My Project",
-    description="Project description",
+# POST /credentials (201). scopes is required. Default expiry is 90 days; expires_in_seconds
+# can only shorten it (the server clamps it). Granting "admin" needs an admin credential.
+created = client.create_credential(CredentialCreateRequestBody(
     created_by="user@example.com",
-)
-result = client.create_project(project)
+    scopes=["read", "write", "execute"],
+    expires_in_seconds=8 * 60 * 60,   # optional
+))
+api_key = created["data"]["apiKey"]
+secret = created["data"]["plaintextSecret"]   # returned ONLY here; store it now
 
-# Get a specific project
-project = client.get_project("project-id")
+# GET /credentials/{id} (no secret in the response)
+credential = client.get_credential("1")
 
-# Update a project
-update = ProjectUpdateRequestBody(
-    description="Updated description",
-    modified_by="user@example.com",
-)
-result = client.update_project("project-id", update)
+# POST /credentials/{id}/archive (204)
+client.archive_credential("1", CredentialArchiveRequestBody(archived_by="user@example.com"))
 
-# Delete a project
-delete_body = ProjectDeleteRequestBody(deleted_by="user@example.com")
-client.delete_project("project-id", delete_body)
+# DELETE /credentials/{id} (204)
+client.delete_credential("1", CredentialDeleteRequestBody(deleted_by="user@example.com"))
 ```
 
-### Managing Jobs
+`update_credential(id, CredentialUpdateRequestBody(modified_by=..., archived=...))` calls `PUT /credentials/{id}`. Only `archived` and `modified_by` can change; `api_key`, `api_secret`, `scopes` and `expires_at` are fixed at creation and the server rejects attempts to change the key or secret with `400`. An omitted `archived` is treated as `False` (un-archive). Servers older than the credential-update fix answer every call with HTTP 200 `{"success": false, "data": "api_key or api_secret cannot be empty"}` without raising, so check `success` if you target one. There is no rotate endpoint for a credential: create a new one, then archive the old one.
+
+`rotate_secret(old_secret_key)` is a different, self-hosting-only operation (`POST /account/rotate-secret`, `admin` scope or Basic auth) that re-encrypts stored secrets after the operator changes the server `SecretKey`. It returns `data: {credentialsRotated, executorsRotated, aiSettingsRotated}`.
+
+### AI: generate job configurations from a prompt
+
+`POST /ai/prompt` (`execute` scope) returns job *configurations*; it does not create jobs. Counts against the account's monthly prompt quota (`429` when exhausted; `402` when platform AI credits are exhausted). A prompt the intent guardrail rejects raises `HTTPError` with status `422`. Returns a `PromptResult` dataclass.
 
 ```python
-from scheduler0.types import (
-    JobRequestBody,
-    JobUpdateRequestBody,
-    JobDeleteRequestBody,
-)
+from scheduler0.types import PromptJobRequest, JobRequestBody
 
-# List jobs with pagination and ordering
-jobs = client.list_jobs(
-    project_id="",              # Optional: Project ID to filter by (empty string for all)
-    limit=10,
-    offset=0,
-    order_by="date_created",
-    order_by_direction="desc",
-)
-
-# Create a single job
-job = JobRequestBody(
-    project_id=123,                    # Required
-    timezone="UTC",                    # Required
-    executor_id=456,                   # Optional
-    data="job payload data",           # Optional
-    spec="0 30 * * * *",              # Optional
-    start_date="2024-01-01T00:00:00Z", # Optional
-    end_date="2024-12-31T23:59:59Z",   # Optional
-    timezone_offset=0,                 # Optional
-    retry_max=3,                       # Optional
-    status="active",                   # Optional
-    created_by="user@example.com",     # Optional
-)
-result = client.create_job(job)
-
-# Create multiple jobs in a single batch request
-jobs = [
-    JobRequestBody(
-        project_id=123,
-        timezone="UTC",
-        data="job 1 payload",
-        spec="0 30 * * * *",
-        start_date="2024-01-01T00:00:00Z",
-        retry_max=3,
-        created_by="user@example.com",
-    ),
-    JobRequestBody(
-        project_id=123,
-        timezone="UTC",
-        data="job 2 payload",
-        spec="0 0 * * * *",
-        start_date="2024-01-01T00:00:00Z",
-        retry_max=5,
-        created_by="user@example.com",
-    ),
-]
-batch_result = client.batch_create_jobs(jobs)
-
-# Get a specific job
-job = client.get_job("job-id")
-
-# Update a job
-update = JobUpdateRequestBody(
-    data="updated payload",
-    spec="0 0 * * * *",
-    status="inactive",
-    modified_by="user@example.com",
-)
-result = client.update_job("job-id", update)
-
-# Delete a job
-delete_body = JobDeleteRequestBody(deleted_by="user@example.com")
-client.delete_job("job-id", delete_body)
-```
-
-### AI-Powered Job Creation
-
-Create job configurations from natural language prompts using AI:
-
-```python
-from scheduler0.types import PromptJobRequest, ClassifyPromptRequest, JobRequestBody
-
-# Create job configurations from a natural language prompt
-prompt_request = PromptJobRequest(
+result = client.create_job_from_prompt(PromptJobRequest(
     prompt="Send weekly reports every Monday at 9 AM",
-    purposes=["reporting", "communication"],
-    events=["weekly_cycle"],
-    recipients=["team@example.com", "manager@example.com"],
-    channels=["email"],
-    timezone="America/New_York",  # Optional IANA timezone; defaults to "UTC" when omitted.
-)
+    purposes=["reporting"],                 # optional
+    events=["weekly_cycle"],                # optional
+    recipients=["team@example.com"],        # optional
+    channels=["email"],                     # optional
+    timezone="America/New_York",            # optional IANA name; invalid -> 400
+    locale="en",                            # optional, default "en"
+))
 
-# Returns a PromptResult with .providers and optional .classification
-result = client.create_job_from_prompt(prompt_request)
-
-# Inspect the intent classification
 if result.classification:
-    print(f"Decision: {result.classification.decision}")  # allow / clarify / reject
-    print(f"Reason: {result.classification.reason}")
+    print(result.classification.decision, result.classification.reason)   # allow / clarify / reject
 
-# Process each provider's job configurations
 for provider in result.providers:
-    print(f"Provider: {provider.provider} / {provider.model}")
-    print(f"Tokens used: {provider.total_tokens}")
-    for config in provider.jobs:
-        print(f"Kind: {config.kind}")
-        print(f"Cron Expression: {config.cron_expression}")
-        if config.next_run_at:
-            print(f"Next Run At: {config.next_run_at}")
-        
-        # Use the generated configuration to create actual jobs
-        job = JobRequestBody(
-            project_id=123,
-            timezone=config.timezone or "UTC",
-            spec=config.cron_expression,
+    print(provider.provider, provider.model, provider.total_tokens, provider.duration_ms)
+    for cfg in provider.jobs:
+        # cfg: kind (FOLLOW_UP|REMINDER|DIGEST), purpose, subject, next_run_at, recurrence, event,
+        # delivery, cron_expression, channel, recipients, start_date, end_date, timezone, metadata
+        client.create_job(JobRequestBody(
+            project_id=project_id,
+            timezone=cfg.timezone or "UTC",
+            spec=cfg.cron_expression,
+            start_date=cfg.start_date,
+            end_date=cfg.end_date,
             created_by="ai-prompt",
-        )
-        if config.start_date:
-            job.start_date = config.start_date
-        if config.end_date:
-            job.end_date = config.end_date
-        if config.subject:
-            import json
-            job.data = json.dumps({
-                "subject": config.subject,
-                "recipients": config.recipients or [],
-            })
-        
-        r = client.create_job(job)
-        print(f"Job created with request ID: {r.get('data')}")
+        ))
 ```
 
-### Classifying a prompt (without AI execution)
+### AI: classify a prompt only
 
-Run only the intent classifier — no model is invoked and no credits are consumed:
+`POST /ai/prompt/classify` runs the intent guardrail without invoking a model and consumes no prompt credits (it counts against the classify quota). Only `en*` locales are accepted (`400` otherwise); `503` if the classifier is not configured.
 
 ```python
 from scheduler0.types import ClassifyPromptRequest
 
 clf = client.classify_prompt(ClassifyPromptRequest(prompt="What is Kubernetes?"))
-print(clf.decision)  # 'reject'
-print(clf.reason)    # 'informational_question_not_schedule_request'
-```
+print(clf.decision, clf.reason)   # IntentClassification(text, decision, reason)
 ```
 
-### Analyzing a conversation for suggestions
+### AI: schedule jobs from a prompt
 
-Analyze an ordered set of conversation messages to detect commitments, requests, deadlines, and follow-ups. The analysis is deterministic and **English only** (a non-`en*` locale returns `UNSUPPORTED_LOCALE`):
+`POST /ai/schedule` (`execute` scope, `201`) runs the prompt pipeline, resolves or creates a project, picks an executor (pinned `executor_id`, the account's only executor, or the best `description`/`tags` match), and creates the jobs synchronously. Consumes one prompt credit. Raises `HTTPError` `422` when the guardrail rejects the prompt and `409` when there are no executors, no match, or no schedulable jobs.
+
+```python
+from scheduler0 import SchedulePromptRequest, ScheduleProjectInput
+
+result = client.schedule_from_prompt(SchedulePromptRequest(
+    prompt="Remind the sales team every Monday at 9am to review the pipeline",
+    created_by="user@example.com",                       # required
+    channels=["email"],
+    project=ScheduleProjectInput(name="Sales reminders"), # or project_id=...
+    # executor_id=3,                                      # pin an executor
+))
+print(result.project["id"], result.project_created)
+print(result.executor["id"], result.executor_matched_by, result.executor_match_reason)  # pinned | only | llm
+print(len(result.jobs), result.provider, result.model)
+```
+
+### AI: conversation suggestions
+
+`POST /ai/suggestions/analyze` (`execute` scope). Request and response use **snake_case**. English only (`400` for other locales); counts against the classify quota.
 
 ```python
 from scheduler0.types import AnalyzeSuggestionsRequest, SuggestionMessage, SuggestionOptions
@@ -639,227 +418,165 @@ result = client.analyze_suggestions(AnalyzeSuggestionsRequest(
     conversation_id="conv_123",
     messages=[
         SuggestionMessage(
-            speaker="Victor",
+            speaker="Victor",                          # string or SuggestionParticipant
             timestamp="2026-07-17T10:00:00-04:00",
             message="I'll send the proposal tomorrow.",
         ),
     ],
     options=SuggestionOptions(locale="en", default_timezone="America/Toronto"),
 ))
-
+# AnalyzeSuggestionsResult: request_id, conversation_id, analyzed_at, suggestions, obligations, warnings, engine
 for suggestion in result.suggestions:
-    print(suggestion["type"], suggestion["reason"])
+    print(suggestion)
 ```
 
-### Recommending send times
+### AI: send-time suggestions
 
-Recommend suitable future send times for a message given sender/recipient time zones, working hours, quiet hours, weekends, priority, and coverage rules. The engine is deterministic and does not send the message or create a job:
+`POST /ai/suggestions/time` (`execute` scope). Deterministic time-zone math, no model, no credits. snake_case request; validation errors are `400` with `{code, message, field}` in `data`.
 
 ```python
 from scheduler0.types import (
-    SendTimeSuggestionsRequest,
-    SendTimeParticipant,
-    SendTimeMessage,
-    SendTimeConstraints,
+    SendTimeSuggestionsRequest, SendTimeParticipant, SendTimeMessage, SendTimeConstraints,
 )
 
 result = client.send_time_suggestions(SendTimeSuggestionsRequest(
     sender=SendTimeParticipant(id="user_123", timezone="America/Toronto"),
-    recipients=[
-        SendTimeParticipant(id="user_456", timezone="America/Los_Angeles", role="primary"),
-    ],
+    recipients=[SendTimeParticipant(id="user_456", timezone="America/Los_Angeles", role="primary")],
     message=SendTimeMessage(priority="normal"),
     constraints=SendTimeConstraints(working_hours_only=True, avoid_weekends=True),
 ))
-
+# SendTimeSuggestionsResult: request_id, reference_time, policy, engine, suggestions, search,
+# rejected_summary, no_suggestion, send_now, warnings, metadata
 for suggestion in result.suggestions:
-    print(suggestion["send_at"], suggestion["score"], suggestion["label"])
+    print(suggestion)
 ```
 
-### Scheduling from a Prompt
-
-Turn a natural-language prompt into actually-scheduled jobs in one call. The server runs the prompt pipeline (intent guardrail + generation), resolves or creates a project, picks the executor whose `description`/`tags` best match the prompt (or uses a pinned `executor_id` / the account's only executor), and creates the jobs synchronously:
+### AI: prompt-request log, models and settings
 
 ```python
-from scheduler0 import SchedulePromptRequest, ScheduleProjectInput
+from scheduler0 import AccountAISettings, ActiveModel
 
-result = client.schedule_from_prompt(SchedulePromptRequest(
-    prompt="Remind the sales team every Monday at 9am to review the pipeline",
-    channels=["email"],
-    created_by="victor",
-    # Optional: pin a project or executor, otherwise they are resolved/created for you.
-    # project=ScheduleProjectInput(name="Sales reminders"),
-    # executor_id=3,
+# GET /ai/prompt-requests -> PromptRequestsResult(requests, total, limit, offset)
+log = client.list_prompt_requests(
+    limit=25, offset=0,                 # limit is clamped to 100
+    provider="openai", model=None, status="success",   # optional filters
+    search="reminder",                  # full-text over the prompt
+    start=None, end=None,               # RFC3339
+    order="DESC",                       # "ASC", anything else = DESC
+)
+for req in log.requests:
+    print(req.provider, req.model, req.total_tokens, req.estimated_cost_usd, req.status)
+
+# GET /ai/models -> data: {provider: [{id, display_name, default}]}
+catalog = client.get_ai_models()["data"]
+
+# GET /ai/settings -> data: AccountAISettings (snake_case; keys masked)
+settings = client.get_account_ai_settings("123")["data"]
+
+# PUT /ai/settings -> data: {message}. Ordered active_models: primary first, then fallbacks.
+client.upsert_account_ai_settings("123", AccountAISettings(
+    active_models=[
+        ActiveModel(provider="openai", model="gpt-4.1-mini"),
+        ActiveModel(provider="anthropic", model="claude-sonnet-4-5"),
+    ],
+    openai_api_key="sk-...",
+    anthropic_api_key="sk-ant-...",
+    # bedrock_access_key_id, bedrock_secret_key, bedrock_region, openrouter_api_key
 ))
-
-print(
-    f"project {result.project['id']} (created={result.project_created}), "
-    f"executor {result.executor['id']} matched by {result.executor_matched_by}, "
-    f"{len(result.jobs)} jobs created"
-)
 ```
 
-Executor selection uses each executor's `description` and `tags` (set them on `create_executor` / `update_executor`). When the account has more than one executor and no `executor_id` is pinned, the model picks the best match; if it cannot confidently match, the call raises `requests.HTTPError` with a `409` status (pin an `executor_id` or refine descriptions/tags). A prompt rejected by the intent guardrail raises `requests.HTTPError` with a `422` status.
-
-**Note**: The AI prompt endpoint requires:
-- Valid API credentials (API Key + Secret)
-- Account ID header
-- Sufficient credits (1 credit per prompt execution)
-
-The `timezone` field is optional. When omitted, the AI assumes `UTC`. When set to an IANA name (e.g. `"America/New_York"`), the AI interprets relative phrases like *"9am tomorrow"* in that timezone and emits `nextRunAt` / `startDate` / `endDate` with the matching numeric offset. Invalid timezone strings are rejected by the API with `400 Bad Request`.
-
-### Managing Async Tasks
-
-> **Note**: Async Tasks Management is designed for self-hosted deployments where you need granular control over team access and resource usage.
+### Features
 
 ```python
-# Get async task status
-task = client.get_async_task("request-id")
+# GET /features (read scope) -> data: [{id, name, dateCreated, dateModified}, ...]
+features = client.list_features()["data"]
 ```
 
-### Health Monitoring
+### Health
 
 ```python
-# Check cluster health (no authentication required)
+# GET /healthcheck - no auth required
 health = client.healthcheck()
-print(f"Leader: {health['data']['leaderAddress']}")
-print(f"Raft State: {health['data']['raftStats']['state']}")
+print(health["data"]["leaderAddress"], health["data"]["leaderId"])
+print(health["data"]["raftStats"]["state"])
 ```
 
-### Backup and Restore
+### Accounts (self-hosting, `admin` scope or Basic auth)
 
-> **Note**: Backup and restore are cluster-level operations. They require a credential carrying the **`admin`** scope, or Basic Authentication (operator bootstrap).
+For API-key callers the `{id}` in the path must equal `X-Account-ID` (`403` otherwise). The `account_id` argument is also sent as the `X-Account-ID` header.
 
 ```python
-# Start an online database backup
-backup = client.backup_database()
+from scheduler0.types import AccountCreateRequestBody, AccountUpdateRequestBody, FeatureRequest
 
-# Restore from a backup file (S3 object key when S3 is configured, else local path)
-restore = client.restore_database("db-20260212-114810.db")
+account = client.create_account(AccountCreateRequestBody(name="My Account"))          # POST /accounts (201)
+account = client.get_account("123")                                                  # GET /accounts/{id}
+account = client.update_account("123", AccountUpdateRequestBody(name="New Name"))    # PUT /accounts/{id}
+# data: {id, name, features: [{accountId, featureId, feature}], dateCreated, dateModified}
+
+client.add_feature_to_account("123", FeatureRequest(feature_id=1))        # PUT /accounts/{id}/feature (201) -> {featureId}
+client.remove_feature_from_account("123", FeatureRequest(feature_id=1))   # DELETE /accounts/{id}/feature (204)
+client.add_all_features_to_account("123")                                 # PUT /accounts/{id}/features/all -> {message}
+client.remove_all_features_from_account("123")                            # DELETE /accounts/{id}/features/all -> {message}
+
+count = client.get_account_execution_count("123")
+# data: {id, accountId, executionCount, tokens, dateCreated, dateModified, nextResetDate}
+client.increase_account_execution_count("123", 10000)                     # -> {newExecutionCount}
+
+usage = client.get_ai_usage("123")
+# data: {accountId, periodStart, nextResetDate, prompt: {limit, used, remaining}, classify: {...}, estimatedCostUsd}
+
+client.get_account_tokens("123")                                          # -> {tokens}
+client.add_account_tokens("123", 1000)                                    # amount > 0 -> {newBalance}
+
+client.rotate_secret("<old-hex-secret-key>")                              # POST /account/rotate-secret
 ```
 
-## Data Types
-
-### Job Status
-- `"active"` - Job is active and will be executed
-- `"inactive"` - Job is inactive and will not be executed
-
-### Executor Types
-- `"webhook_url"` - HTTP webhook executor
-- `"cloud_function"` - Cloud function executor
-
-### Webhook Methods
-- `"GET"`, `"POST"`, `"PUT"`, `"DELETE"`
-
-### Job Creation Behavior
-- **Single Job Creation**: `create_job()` internally uses batch creation with a single job
-- **Batch Job Creation**: `batch_create_jobs()` allows creating multiple jobs in one API call
-- **Backend API**: The `/api/v1/jobs` POST endpoint expects an array of jobs for batch processing
-- **Response Format**: Job creation returns a dict with HTTP 202 Accepted status and a `data` field containing the request ID (string) for async task tracking
-- **Async Tracking**: Use the request ID with `get_async_task()` to track job creation status
-
-## Error Handling
-
-The client raises `requests.HTTPError` for API errors. Check the error message for details:
+### Cluster, backup and restore (self-hosting, `admin` scope or Basic auth + `X-Peer`)
 
 ```python
-import requests
+client.list_cluster_nodes()                       # GET  /cluster/list-nodes -> data: [...]
+client.add_self_to_cluster()                      # POST /cluster/add-self -> {status}
+client.remove_self_from_cluster()                 # POST /cluster/remove-self
+client.transfer_cluster_leadership()              # POST /cluster/transfer-leadership (leader only)
+client.add_cluster_node("2", "127.0.0.1:7072", "http://127.0.0.1:9092")  # ?nodeId&nodeAddress&clientAddress
+client.remove_cluster_node("2")                   # ?nodeId=
+client.promote_cluster_node("2")                  # ?nodeId=
+client.demote_cluster_node("2")                   # ?nodeId=
+client.force_rebuild_cluster("1")                 # ?seedNodeId= (seed node only)
+client.reset_raft()                               # clears local Raft state; the server process exits afterwards
 
-try:
-    result = client.create_job(job)
-except requests.HTTPError as e:
-    if e.response.status_code == 400:
-        # Handle bad request
-        print(f"Bad request: {e}")
-    elif e.response.status_code == 401:
-        # Handle unauthorized
-        print(f"Unauthorized: {e}")
-    elif e.response.status_code == 403:
-        # Handle forbidden
-        print(f"Forbidden: {e}")
-    elif e.response.status_code == 404:
-        # Handle not found
-        print(f"Not found: {e}")
-    else:
-        print(f"Error: {e}")
+client.dump_schedule_queue()                      # GET /cluster/dump/schedule-queue
+client.dump_job_executions_cache()                # GET /cluster/dump/job-executions-cache
+client.dump_job_queues()                          # GET /cluster/dump/job-queues
+client.dump_job_queue_versions()                  # GET /cluster/dump/job-queue-versions
+
+client.backup_database()                          # POST /cluster/backup  (202) -> {status, requestId}
+client.restore_database("db-20260212-114810.db")  # POST /cluster/restore (202) -> {status, requestId}
 ```
 
-## Account ID Requirements
+## Constants
 
-Most endpoints require the `X-Account-ID` header. The following endpoints require account ID:
-- `/api/v1/jobs/*`
-- `/api/v1/projects/*`
-- `/api/v1/credentials/*`
-- `/api/v1/executors/*`
-- `/api/v1/async-tasks/*`
-- `/api/v1/executions`
-- `/api/v1/ai/prompt` (AI prompt endpoint)
-- `/api/v1/ai/schedule` (prompt-to-scheduled-jobs endpoint)
+| Value | Meaning |
+|-------|---------|
+| Job `status` | `active`, `inactive` |
+| Executor `type` | `webhook_url`, `cloud_function`, `local` |
+| Executor `webhookMethod` | `GET`, `POST`, `PUT`, `DELETE` |
+| Execution `state` (int) | `0` scheduled, `1` success, `2` failed; query filter uses `scheduled`/`success`/`failed` |
+| Async task `state` (int) | `0` not started, `1` in progress, `2` success, `3` failed |
+| Credential `scopes` | `read`, `write`, `execute`, `admin` |
+| Prompt job `kind` | `FOLLOW_UP`, `REMINDER`, `DIGEST` |
+| Intent `decision` | `allow`, `clarify`, `reject` |
+| `executorMatchedBy` | `pinned`, `only`, `llm` |
 
-Account endpoints (`/api/v1/accounts/*`) and features (`/api/v1/features`) do not require account ID.
-
-### Per-Request Account ID Override
-
-You can override the Account ID set during client initialization on a per-request basis:
-
-```python
-# Override Account ID for a specific request
-projects = client.list_projects(
-    limit=10,
-    offset=0,
-    account_id_override="456",  # Overrides the client's default Account ID
-)
-```
-
-For other methods, the Account ID can be set in the request body's `account_id` field (which is excluded from JSON serialization but used for the `X-Account-ID` header).
-
-## Credits and AI Features
-
-The AI prompt endpoint (`/api/v1/ai/prompt`) requires:
-- **Credits**: 1 credit per prompt execution
-- **Authentication**: Valid API Key + Secret credentials
-- **Account ID**: Required header for credit deduction
-
-Credits are automatically deducted when the prompt is successfully processed. If the prompt processing fails after credit deduction, credits are not refunded.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Request bodies use camelCase on the wire (the client converts the dataclasses' snake_case fields), except `/ai/settings` and `/ai/suggestions/*`, which use snake_case end to end. Response payloads are returned as sent by the server.
 
 ## Development
 
-### Running Tests
-
 ```bash
-# Install development dependencies
 pip install -e ".[dev]"
-
-# Run all tests
 pytest
-
-# Run tests with coverage
-pytest --cov=scheduler0 --cov-report=html
-
-# Run specific test file
-pytest tests/test_client.py
-
-# Run with verbose output
-pytest -v
 ```
 
-### Test Structure
+## License
 
-The test suite includes:
-- **test_client.py**: Core client functionality, authentication, request building, error handling
-- **test_accounts.py**: Account management methods
-- **test_credentials.py**: Credential management methods
-- **test_jobs.py**: Job management methods (single and batch)
-- **test_projects.py**: Project management methods
-- **test_executors.py**: Executor management methods
-- **test_executions.py**: Execution listing methods
-- **test_features.py**: Feature listing methods
-- **test_async_tasks.py**: Async task status methods
-- **test_healthcheck.py**: Health monitoring methods
-- **test_prompt.py**: AI-powered job creation methods
-- **test_types.py**: Type definition validation
-
+MIT. See [LICENSE](LICENSE).

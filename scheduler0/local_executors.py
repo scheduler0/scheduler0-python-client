@@ -18,6 +18,9 @@ def register_local_executor(
 ) -> dict:
     """Register a new local executor. The server sets the executor type to "local".
 
+    ``name``, ``command`` and ``created_by`` are required (400 otherwise).
+    Returns ``{"success": true, "data": {"id": <executor id>}}`` (201).
+
     POST /local-executors
     """
     return self._post("/local-executors", body, account_id_override=account_id_override)

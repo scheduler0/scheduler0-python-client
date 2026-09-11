@@ -78,12 +78,12 @@ class TestExecutions:
         client.list_executions(
             limit=10,
             offset=0,
-            state="completed",
+            state="success",
             order_by="dateCreated",
             order_direction="DESC",
         )
         call_args = mock_get.call_args
-        assert call_args[1]["params"]["state"] == "completed"
+        assert call_args[1]["params"]["state"] == "success"
         assert call_args[1]["params"]["orderBy"] == "dateCreated"
         assert call_args[1]["params"]["orderDirection"] == "DESC"
 

@@ -52,14 +52,16 @@ def remove_feature_from_account(self: Client, account_id: str, body: FeatureRequ
     self._delete(f"/accounts/{account_id}/feature", body, account_id_override=account_id)
 
 
-def add_all_features_to_account(self: Client, account_id: str) -> None:
-    """Add all features to an account."""
-    self._request("PUT", f"/accounts/{account_id}/features/all", None, params=None, account_id_override=account_id)
+def add_all_features_to_account(self: Client, account_id: str) -> dict:
+    """Add all features to an account. Returns ``{"success": true, "data": {"message": ...}}``."""
+    response = self._request("PUT", f"/accounts/{account_id}/features/all", None, params=None, account_id_override=account_id)
+    return response.json()
 
 
-def remove_all_features_from_account(self: Client, account_id: str) -> None:
-    """Remove all features from an account."""
-    self._request("DELETE", f"/accounts/{account_id}/features/all", None, params=None, account_id_override=account_id)
+def remove_all_features_from_account(self: Client, account_id: str) -> dict:
+    """Remove all features from an account. Returns ``{"success": true, "data": {"message": ...}}``."""
+    response = self._request("DELETE", f"/accounts/{account_id}/features/all", None, params=None, account_id_override=account_id)
+    return response.json()
 
 
 def get_account_execution_count(self: Client, account_id: str) -> dict:

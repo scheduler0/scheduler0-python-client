@@ -1,7 +1,9 @@
 """
 Backup and restore operations for Scheduler0.
 
-These are self-hosting cluster endpoints and require Basic Authentication.
+These are self-hosting cluster endpoints. They require a credential carrying the
+``admin`` scope, or Basic Authentication with the ``X-Peer`` header. Both return
+202 with ``{"status": ..., "requestId": ...}``.
 """
 
 from typing import Optional
