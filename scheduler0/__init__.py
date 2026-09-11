@@ -107,6 +107,8 @@ __all__ = [
     "AIUsageDimension",
     "AIUsage",
     "AccountAISettings",
+    "ActiveModel",
+    "ModelInfo",
     "PromptRequest",
     "PromptRequestsResult",
     "Credential",

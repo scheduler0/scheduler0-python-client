@@ -57,7 +57,17 @@ def update_credential(
     body: CredentialUpdateRequestBody,
     account_id_override: Optional[str] = None,
 ) -> dict:
-    """Update a credential."""
+    """Update a credential (PUT /credentials/{id}).
+
+    Only ``archived`` and ``modified_by`` can change; ``api_key``,
+    ``api_secret``, ``scopes`` and ``expires_at`` are fixed at creation and the
+    server rejects attempts to change the key or secret with 400. An omitted
+    ``archived`` is treated as ``False`` (un-archive).
+
+    Servers older than the credential-update fix answer every call with HTTP 200
+    ``{"success": false, "data": "api_key or api_secret cannot be empty"}``; no
+    exception is raised in that case, so check ``success`` in the returned dict.
+    """
     return self._put(f"/credentials/{credential_id}", body, account_id_override=account_id_override)
 
 
@@ -94,9 +104,10 @@ def rotate_secret(self: Client, old_secret_key: str) -> dict:
 
     **Self-Hosting Only.** The operator must update ``SecretKey`` in their secrets
     source and reload/restart the server before calling this method, then pass the
-    previous key as ``old_secret_key``. Requires a basic-auth client instance
-    (created with ``username`` + ``password``). The operation is idempotent and
-    resumable — if interrupted, call again to complete it.
+    previous key as ``old_secret_key``. Requires a credential with the ``admin``
+    scope or a basic-auth client instance (created with ``username`` +
+    ``password``). The operation is idempotent and resumable — if interrupted,
+    call again to complete it.
 
     Returns:
         dict: ``{"success": True, "data": {"credentialsRotated": <count>,

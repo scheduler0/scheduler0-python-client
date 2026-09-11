@@ -86,9 +86,12 @@ class ModelInfo:
 
 @dataclass
 class AccountAISettings:
+    """Body for PUT /ai/settings and shape of GET /ai/settings ``data``.
+
+    Field names are snake_case on the wire (unlike most other resources).
+    Provider keys are masked when read back; ``account_id`` is never sent.
+    """
     account_id: Optional[int] = None
-    provider: Optional[str] = None
-    model: Optional[str] = None
     active_models: Optional[List[ActiveModel]] = None
     openai_api_key: Optional[str] = None
     anthropic_api_key: Optional[str] = None
@@ -155,6 +158,11 @@ class CredentialCreateRequestBody:
 
 @dataclass
 class CredentialUpdateRequestBody:
+    """Body for PUT /credentials/{id}.
+
+    Only ``archived`` and ``modified_by`` are mutable; ``api_key``,
+    ``api_secret``, ``scopes`` and ``expires_at`` are fixed at creation.
+    """
     modified_by: str
     archived: bool = False
     account_id: Optional[int] = None  # Excluded from JSON
@@ -198,6 +206,12 @@ class Job:
 
 @dataclass
 class JobRequestBody:
+    """One element of the array sent to POST /jobs.
+
+    ``created_by`` is optional here for backwards compatibility but the server
+    rejects the request with 400 when it is missing. An empty/omitted ``spec``
+    creates a one-time job that fires at ``start_date``.
+    """
     project_id: int
     timezone: str
     executor_id: Optional[int] = None
@@ -844,7 +858,11 @@ class CleanupOldLogsResponse:
 # Local Executor Types
 @dataclass
 class LocalExecutorRegisterRequest:
-    """Body for POST /local-executors. The server sets the executor type to "local"."""
+    """Body for POST /local-executors. The server sets the executor type to "local".
+
+    ``created_by`` is optional here for backwards compatibility but the server
+    rejects the request with 400 when it is missing.
+    """
     name: str
     command: str
     working_dir: Optional[str] = None
